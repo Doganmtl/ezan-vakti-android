@@ -1,5 +1,7 @@
 package com.example.ezanvakti.notify
 
+import com.example.ezanvakti.i18n.t
+
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -24,15 +26,16 @@ object CanliSayac {
     private const val BILDIRIM_ID = 900
 
     private fun kanal(context: Context) {
-        val ch = NotificationChannel(KANAL, "Canlı geri sayım", NotificationManager.IMPORTANCE_LOW).apply {
-            description = "Kilit ekranında sıradaki vakte kalan süre"
+        val ch = NotificationChannel(KANAL, t("Canlı geri sayım"), NotificationManager.IMPORTANCE_LOW).apply {
+            description = t("Kilit ekranında sıradaki vakte kalan süre")
             setShowBadge(false)
             lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
         }
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
     }
 
-    fun goster(context: Context, sayim: GeriSayim, yer: String) {
+    /** [tumVakitler] verilirse kart açıldığında günün vakitleri de görünür. */
+    fun goster(context: Context, sayim: GeriSayim, yer: String, tumVakitler: String? = null) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
@@ -43,9 +46,9 @@ object CanliSayac {
         )
         val alt = buildString {
             append(sayim.alt).append(" · ").append(yer)
-            sayim.ramazanGunu?.let { append(" · Ramazan'ın $it. günü") }
+            sayim.ramazanGunu?.let { append(t(" · Ramazan'ın %s. günü", it)) }
         }
-        val n = NotificationCompat.Builder(context, KANAL)
+        val builder = NotificationCompat.Builder(context, KANAL)
             .setSmallIcon(R.drawable.ic_stat_vakit)
             .setContentTitle(sayim.baslik)
             .setContentText(alt)
@@ -60,8 +63,10 @@ object CanliSayac {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(ac)
-            .build()
-        NotificationManagerCompat.from(context).notify(BILDIRIM_ID, n)
+        if (tumVakitler != null) {
+            builder.setStyle(NotificationCompat.BigTextStyle().bigText(alt + "\n" + tumVakitler))
+        }
+        NotificationManagerCompat.from(context).notify(BILDIRIM_ID, builder.build())
     }
 
     fun kaldir(context: Context) {

@@ -1,5 +1,7 @@
 package com.example.ezanvakti.ui
 
+import com.example.ezanvakti.i18n.t
+
 import android.app.Application
 import android.content.Context
 import android.os.Build
@@ -29,7 +31,7 @@ data class ZikirDurumu(
 
     /** Ekranda gösterilen zikir adı. */
     val gosterilenAd: String
-        get() = if (mod == ZikirModu.TESBIHAT) Tesbihat.adimlar.getOrNull(tesbihatAdim)?.ad ?: "Tesbihat tamamlandı" else ad
+        get() = if (mod == ZikirModu.TESBIHAT) Tesbihat.adimlar.getOrNull(tesbihatAdim)?.ad ?: t("Tesbihat tamamlandı") else ad
 
     val gecerliHedef: Int
         get() = if (mod == ZikirModu.TESBIHAT) Tesbihat.adimlar.getOrNull(tesbihatAdim)?.hedef ?: 33 else hedef

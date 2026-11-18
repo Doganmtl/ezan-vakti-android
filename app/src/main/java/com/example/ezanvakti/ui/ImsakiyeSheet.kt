@@ -1,5 +1,7 @@
 package com.example.ezanvakti.ui
 
+import com.example.ezanvakti.i18n.t
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,7 +33,7 @@ import com.example.ezanvakti.model.VakitCalculator
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-private val kisaTarih = DateTimeFormatter.ofPattern("d MMM EEE", VakitCalculator.tr)
+private val kisaTarih: DateTimeFormatter get() = DateTimeFormatter.ofPattern("d MMM EEE", com.example.ezanvakti.i18n.Dil.locale)
 
 /** Ramazan imsakiyesi: seçili ilçenin elimizdeki günleri için imsak (sahur sonu) ve iftar saatleri. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,9 +54,9 @@ fun ImsakiyeSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.9f).padding(horizontal = 16.dp)) {
-            Text("İmsakiye", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text(t("İmsakiye"), fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Text(
-                yer + (donem?.let { " · ${it.hicriYil} Ramazanı (${it.start.uzun()} – ${it.end.uzun()})" } ?: ""),
+                yer + (donem?.let { t(" · %s Ramazanı (%s – %s)", it.hicriYil, it.start.uzun(), it.end.uzun()) } ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 12.dp),
@@ -62,18 +64,17 @@ fun ImsakiyeSheet(
 
             if (satirlar.isEmpty()) {
                 Text(
-                    "Ramazan günlerinin vakitleri, Diyanet her ayın vakitlerini yayımladıkça burada görünür " +
-                        "(genellikle Ramazan'a yaklaşık bir ay kala). Ramazan başlangıcı ve bayram tarihleri Takvim sekmesinde.",
+                    t("Ramazan günlerinin vakitleri, Diyanet her ayın vakitlerini yayımladıkça burada görünür (genellikle Ramazan'a yaklaşık bir ay kala). Ramazan başlangıcı ve bayram tarihleri Takvim sekmesinde."),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 return@Column
             }
 
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                Baslik("Gün", Modifier.width(44.dp))
-                Baslik("Tarih", Modifier.weight(1f))
-                Baslik("İmsak", Modifier.width(70.dp))
-                Baslik("İftar", Modifier.width(70.dp))
+                Baslik(t("Gün"), Modifier.width(44.dp))
+                Baslik(t("Tarih"), Modifier.weight(1f))
+                Baslik(t("İmsak"), Modifier.width(70.dp))
+                Baslik(t("İftar"), Modifier.width(70.dp))
             }
             HorizontalDivider()
             LazyColumn {
@@ -90,7 +91,7 @@ fun ImsakiyeSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text("$gun", fontWeight = FontWeight.Bold, modifier = Modifier.width(44.dp))
-                        Text(tarih.format(kisaTarih) + if (bugunMu) " · bugün" else "", modifier = Modifier.weight(1f))
+                        Text(tarih.format(kisaTarih) + if (bugunMu) t(" · bugün") else "", modifier = Modifier.weight(1f))
                         Text(VakitCalculator.clock(d.time(Vakit.IMSAK)), style = TextStyle(fontFeatureSettings = "tnum"), modifier = Modifier.width(70.dp))
                         Text(VakitCalculator.clock(d.time(Vakit.AKSAM)), fontWeight = FontWeight.SemiBold, style = TextStyle(fontFeatureSettings = "tnum"), modifier = Modifier.width(70.dp))
                     }
@@ -98,8 +99,7 @@ fun ImsakiyeSheet(
                 }
                 item {
                     Text(
-                        "İmsak: sahurun son anı, orucun başladığı vakit. İftar: akşam ezanı. Vakitler Diyanet verisidir; " +
-                            "ilerideki günler veri yayımlandıkça eklenir.",
+                        t("İmsak: sahurun son anı, orucun başladığı vakit. İftar: akşam ezanı. Vakitler Diyanet verisidir; ilerideki günler veri yayımlandıkça eklenir."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 16.dp),

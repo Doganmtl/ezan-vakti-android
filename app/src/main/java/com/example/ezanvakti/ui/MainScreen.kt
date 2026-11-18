@@ -1,5 +1,8 @@
 package com.example.ezanvakti.ui
 
+import com.example.ezanvakti.i18n.t
+import com.example.ezanvakti.model.HicriTakvim
+
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -77,7 +80,9 @@ import com.example.ezanvakti.model.RamazanHesabi
 import com.example.ezanvakti.model.Vakit
 import com.example.ezanvakti.model.VakitCalculator
 import com.example.ezanvakti.notify.NotificationScheduler
-import com.example.ezanvakti.ui.theme.vakitColors
+import com.example.ezanvakti.ui.theme.ArkaPlan
+import com.example.ezanvakti.ui.theme.VakitDuzeni
+import com.example.ezanvakti.ui.theme.arkaPlanRenkleri
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 
@@ -165,7 +170,8 @@ fun MainScreen(vm: PrayerViewModel) {
         if (state.phase is Phase.NeedsLocation) showPicker = true
     }
 
-    val (top, bottom) = vakitColors(durum?.current ?: Vakit.OGLE)
+    val (top, bottom) = arkaPlanRenkleri(ArkaPlan.from(state.arkaPlan), durum?.current ?: Vakit.OGLE)
+    val duzen = VakitDuzeni.from(state.vakitDuzeni)
     val topColor by animateColorAsState(top, tween(1500), label = "top")
     val bottomColor by animateColorAsState(bottom, tween(1500), label = "bottom")
 
@@ -183,10 +189,10 @@ fun MainScreen(vm: PrayerViewModel) {
                     .widthIn(max = 1100.dp)
             ) {
                 Header(
-                    title = state.location?.title ?: "Konum seçin",
+                    title = state.location?.title ?: t("Konum seçin"),
                     dateLine = buildString {
                         append(VakitCalculator.longDate(now))
-                        today?.hijri?.let { append(" · ").append(it) }
+                        HicriTakvim.goster(today?.hijri)?.let { append(" · ").append(it) }
                     },
                     wide = wide,
                     onLocation = { showPicker = true },
@@ -209,7 +215,10 @@ fun MainScreen(vm: PrayerViewModel) {
                     if (tab == 2) {
                         ZikirEkrani(zikirVm)
                     } else if (tab == 3) {
-                        KibleEkrani(state.location?.title)
+                        KibleEkrani(
+                            state.location?.title,
+                            state.location?.takeIf { !it.turkiyede }?.country?.let { it.nameEn ?: it.name } ?: "Türkiye",
+                        )
                     } else if (tab == 4) {
                         DigerEkrani(
                             sayfa = digerSayfa,
@@ -233,15 +242,15 @@ fun MainScreen(vm: PrayerViewModel) {
                             state.days.isEmpty() && (phase is Phase.Idle || phase is Phase.Locating || phase is Phase.Loading) ->
                                 StatusView(
                                     icon = "📍",
-                                    message = if (phase is Phase.Locating) "Konumunuz bulunuyor…" else "Vakitler yükleniyor…",
+                                    message = if (phase is Phase.Locating) t("Konumunuz bulunuyor…") else t("Vakitler yükleniyor…"),
                                     showsProgress = true,
                                 )
 
                             state.days.isEmpty() && phase is Phase.Failed ->
-                                StatusView("📶", phase.message, actionLabel = "Tekrar dene") { vm.reload() }
+                                StatusView("📶", phase.message, actionLabel = t("Tekrar dene")) { vm.reload() }
 
                             state.days.isEmpty() && phase is Phase.NeedsLocation ->
-                                StatusView("🗺️", phase.message ?: "Vakitleri görmek için il ve ilçenizi seçin.", actionLabel = "Konum seç") {
+                                StatusView("🗺️", phase.message ?: t("Vakitleri görmek için il ve ilçenizi seçin."), actionLabel = t("Konum seç")) {
                                     showPicker = true
                                 }
 
@@ -264,7 +273,7 @@ fun MainScreen(vm: PrayerViewModel) {
                                             Modifier.width(380.dp).fillMaxHeight().verticalScroll(rememberScrollState()),
                                             verticalArrangement = Arrangement.spacedBy(20.dp),
                                         ) {
-                                            PrayerList(today, durum, now, large = true, modifier = Modifier.fillMaxWidth())
+                                            PrayerList(today, durum, now, large = true, modifier = Modifier.fillMaxWidth(), duzen = duzen)
                                             siradaki?.let { SiradakiDiniGun(it, bugunTarih, onClick = { tab = 1 }, modifier = Modifier.fillMaxWidth()) }
                                         }
                                     }
@@ -284,14 +293,14 @@ fun MainScreen(vm: PrayerViewModel) {
                                             BugununDiniGunu(bugununGunleri, large = false, modifier = Modifier.fillMaxWidth())
                                             CountdownCard(durum, now, large = false, modifier = Modifier.fillMaxWidth())
                                             ramazan?.let { RamazanKarti(it, now, large = false, onImsakiye = { showImsakiye = true }, modifier = Modifier.fillMaxWidth()) }
-                                            PrayerList(today, durum, now, large = false, modifier = Modifier.fillMaxWidth())
+                                            PrayerList(today, durum, now, large = false, modifier = Modifier.fillMaxWidth(), duzen = duzen)
                                             siradaki?.let { SiradakiDiniGun(it, bugunTarih, onClick = { tab = 1 }, modifier = Modifier.fillMaxWidth()) }
                                         }
                                     }
                                 }
                             }
 
-                            else -> StatusView("📅", "Bugünün vakitleri bulunamadı.", actionLabel = "Yenile") { vm.reload() }
+                            else -> StatusView("📅", t("Bugünün vakitleri bulunamadı."), actionLabel = t("Yenile")) { vm.reload() }
                         }
                     }
                 }
@@ -308,23 +317,23 @@ fun MainScreen(vm: PrayerViewModel) {
                 ) {
                     NavigationBarItem(
                         selected = tab == 0, onClick = { tab = 0 },
-                        icon = { Text("🕌", fontSize = 20.sp) }, label = { Text("Vakitler") }, colors = navRenkleri,
+                        icon = { Text("🕌", fontSize = 20.sp) }, label = { Text(t("Vakitler")) }, colors = navRenkleri,
                     )
                     NavigationBarItem(
                         selected = tab == 1, onClick = { tab = 1 },
-                        icon = { Text("📅", fontSize = 20.sp) }, label = { Text("Takvim") }, colors = navRenkleri,
+                        icon = { Text("📅", fontSize = 20.sp) }, label = { Text(t("Takvim")) }, colors = navRenkleri,
                     )
                     NavigationBarItem(
                         selected = tab == 2, onClick = { tab = 2 },
-                        icon = { Text("📿", fontSize = 20.sp) }, label = { Text("Zikir") }, colors = navRenkleri,
+                        icon = { Text("📿", fontSize = 20.sp) }, label = { Text(t("Zikir")) }, colors = navRenkleri,
                     )
                     NavigationBarItem(
                         selected = tab == 3, onClick = { tab = 3 },
-                        icon = { Text("🧭", fontSize = 20.sp) }, label = { Text("Kıble") }, colors = navRenkleri,
+                        icon = { Text("🧭", fontSize = 20.sp) }, label = { Text(t("Kıble")) }, colors = navRenkleri,
                     )
                     NavigationBarItem(
                         selected = tab == 4, onClick = { if (tab == 4) digerSayfa = DigerSayfa.MENU; tab = 4 },
-                        icon = { Text("☰", fontSize = 20.sp) }, label = { Text("Diğer") }, colors = navRenkleri,
+                        icon = { Text("☰", fontSize = 20.sp) }, label = { Text(t("Diğer")) }, colors = navRenkleri,
                     )
                 }
             }
@@ -345,13 +354,13 @@ fun MainScreen(vm: PrayerViewModel) {
     state.konumOnerisi?.let { oneri ->
         AlertDialog(
             onDismissRequest = vm::konumOnerisiniReddet,
-            title = { Text("Konumunuz değişmiş") },
+            title = { Text(t("Konumunuz değişmiş")) },
             text = {
-                Text("Şu an ${oneri.title} civarında görünüyorsunuz. Vakitler bu konuma göre güncellensin mi?" +
-                    (state.location?.let { "\n\nŞu anki seçim: ${it.title}" } ?: ""))
+                Text(t("Şu an %s civarında görünüyorsunuz. Vakitler bu konuma göre güncellensin mi?", oneri.title) +
+                    (state.location?.let { t("\n\nŞu anki seçim: %s", it.title) } ?: ""))
             },
-            confirmButton = { TextButton(onClick = vm::konumOnerisiniKabulEt) { Text("Güncelle") } },
-            dismissButton = { TextButton(onClick = vm::konumOnerisiniReddet) { Text("Hayır") } },
+            confirmButton = { TextButton(onClick = vm::konumOnerisiniKabulEt) { Text(t("Güncelle")) } },
+            dismissButton = { TextButton(onClick = vm::konumOnerisiniReddet) { Text(t("Hayır")) } },
         )
     }
     if (showSettings) SettingsSheet(vm, state, onDismiss = { showSettings = false })
@@ -386,11 +395,11 @@ private fun Header(
                 .weight(1f)
                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                 .clickable(onClick = onLocation)
-                .semantics { contentDescription = "Konum: $title. Değiştirmek için dokunun." }
+                .semantics { contentDescription = t("Konum: %s. Değiştirmek için dokunun.", title) }
                 .padding(4.dp)
         ) {
             Text(
-                "➤ $title ▾",
+                t("➤ %s ▾", title),
                 fontSize = if (wide) 22.sp else 17.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -402,7 +411,7 @@ private fun Header(
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.18f))
                 .clickable(onClick = onSettings)
-                .semantics { contentDescription = "Ayarlar" },
+                .semantics { contentDescription = t("Ayarlar") },
             contentAlignment = Alignment.Center,
         ) {
             Text("⚙", fontSize = 20.sp)
@@ -421,12 +430,12 @@ private fun ExactAlarmBanner(wide: Boolean, onAllow: () -> Unit, onDismiss: () -
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            "🔔 Bildirimlerin vakit girdiği dakikada gelmesi için izin verin.",
+            t("🔔 Bildirimlerin vakit girdiği dakikada gelmesi için izin verin."),
             fontSize = 13.sp,
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onDismiss) { Text("Sonra", color = Color.White.copy(alpha = 0.75f)) }
-        TextButton(onClick = onAllow) { Text("İzin ver", color = Color.White, fontWeight = FontWeight.Bold) }
+        TextButton(onClick = onDismiss) { Text(t("Sonra"), color = Color.White.copy(alpha = 0.75f)) }
+        TextButton(onClick = onAllow) { Text(t("İzin ver"), color = Color.White, fontWeight = FontWeight.Bold) }
     }
 }
 

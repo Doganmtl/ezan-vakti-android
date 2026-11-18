@@ -26,6 +26,12 @@ object AppConfig {
     const val DIYANET_EMAIL = ""      // Awqat Salah hesabı e-postası (isteğe bağlı)
     const val DIYANET_PASSWORD = ""   // Awqat Salah hesabı şifresi (isteğe bağlı)
 
+    /**
+     * Geri bildirimlerin gideceği e-posta adresi. Kullanıcı Ayarlar → Geri bildirim'den en fazla
+     * 100 karakter yazar; telefonundaki e-posta uygulaması mesajı bu adrese hazır açar. Boşsa bölüm gizlenir.
+     */
+    const val GERI_BILDIRIM_EPOSTA = "doganmutlu.apps@outlook.com"
+
     /** Türkiye'nin Diyanet sistemindeki ülke kimliği. */
     const val TURKEY_COUNTRY_ID = 2
 

@@ -1,5 +1,6 @@
 package com.example.ezanvakti
 
+import android.content.Context
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -7,12 +8,19 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ezanvakti.i18n.Dil
 import com.example.ezanvakti.ui.MainScreen
 import com.example.ezanvakti.ui.PrayerViewModel
 import com.example.ezanvakti.ui.ZikirTuslari
 import com.example.ezanvakti.ui.theme.EzanVaktiTheme
 
 class MainActivity : ComponentActivity() {
+    // Uygulama içinden seçilen dil (ve Arapça, Urduca, Farsçada sağdan sola düzen) bu bağlamla uygulanır.
+    override fun attachBaseContext(newBase: Context) {
+        Dil.baslat(newBase)
+        super.attachBaseContext(Dil.sar(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Arka plan her zaman koyu degrade olduğu için durum çubuğu simgeleri beyaz

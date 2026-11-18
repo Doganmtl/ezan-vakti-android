@@ -47,8 +47,15 @@ object Tazeleyici {
         VakitWidget.ciz(context, days, location, dini, now)
 
         val sayim = if (location != null) GeriSayimHesabi.hesapla(days, now, dini) else null
-        if (storage.canliSayac && sayim != null && location != null) {
-            CanliSayac.goster(context, sayim, location.title)
+        val mod = storage.canliSayacModu
+        val gosterilsin = sayim != null && (mod != "ramazan" || sayim.ramazanGunu != null)
+        if (storage.canliSayac && gosterilsin && sayim != null && location != null) {
+            val tum = if (mod == "tum") VakitCalculator.today(days, now)?.let { gun ->
+                com.example.ezanvakti.model.Vakit.entries.chunked(3).joinToString("\n") { satir ->
+                    satir.joinToString("   ") { "${it.adi} ${VakitCalculator.clock(gun.time(it))}" }
+                }
+            } else null
+            CanliSayac.goster(context, sayim, location.title, tum)
         } else {
             CanliSayac.kaldir(context)
         }

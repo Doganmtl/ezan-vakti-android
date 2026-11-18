@@ -1,5 +1,7 @@
 package com.example.ezanvakti.ui
 
+import com.example.ezanvakti.i18n.t
+
 import android.content.Context
 import android.hardware.GeomagneticField
 import android.hardware.Sensor
@@ -64,7 +66,7 @@ private const val HIZALI_DERECE = 3.0
 private data class KibleKonumu(val enlem: Double, val boylam: Double, val kaynak: String)
 
 @Composable
-fun KibleEkrani(yerAdi: String?) {
+fun KibleEkrani(yerAdi: String?, ulke: String = "Türkiye") {
     val context = LocalContext.current
     var konum by remember { mutableStateOf<KibleKonumu?>(null) }
     var konumHata by remember { mutableStateOf<String?>(null) }
@@ -75,11 +77,11 @@ fun KibleEkrani(yerAdi: String?) {
         val resolver = LocationResolver(context)
         val loc = resolver.koordinat()
         konum = when {
-            loc != null -> KibleKonumu(loc.latitude, loc.longitude, "Bulunduğunuz konum")
-            yerAdi != null -> resolver.adresKoordinati(yerAdi)?.let { (en, boy) -> KibleKonumu(en, boy, "$yerAdi (yaklaşık)") }
+            loc != null -> KibleKonumu(loc.latitude, loc.longitude, t("Bulunduğunuz konum"))
+            yerAdi != null -> resolver.adresKoordinati(yerAdi, ulke)?.let { (en, boy) -> KibleKonumu(en, boy, t("%s (yaklaşık)", yerAdi)) }
             else -> null
         }
-        if (konum == null) konumHata = "Konum alınamadı. Konum servisini açıp tekrar deneyin."
+        if (konum == null) konumHata = t("Konum alınamadı. Konum servisini açıp tekrar deneyin.")
     }
 
     val pusula = rememberPusula()
@@ -94,12 +96,12 @@ fun KibleEkrani(yerAdi: String?) {
             when {
                 k == null && konumHata == null -> {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.padding(top = 60.dp))
-                    Text("Konumunuz bulunuyor…")
+                    Text(t("Konumunuz bulunuyor…"))
                 }
                 k == null -> {
                     Text("🧭", fontSize = 48.sp, modifier = Modifier.padding(top = 40.dp))
                     Text(konumHata.orEmpty(), textAlign = TextAlign.Center)
-                    TextButton(onClick = { deneme++ }) { Text("Tekrar dene", color = Color.White) }
+                    TextButton(onClick = { deneme++ }) { Text(t("Tekrar dene"), color = Color.White) }
                 }
                 else -> {
                     val kibleAcisi = Kible.aci(k.enlem, k.boylam)
@@ -120,10 +122,10 @@ fun KibleEkrani(yerAdi: String?) {
 
                     Text(
                         when {
-                            yon == null -> "Kıble ${kibleAcisi.roundToInt()}°"
-                            hizali -> "Kıbleye yöneldiniz ✓"
-                            fark!! > 0 -> "${abs(fark).roundToInt()}° sağa dönün"
-                            else -> "${abs(fark!!).roundToInt()}° sola dönün"
+                            yon == null -> t("Kıble %s°", kibleAcisi.roundToInt())
+                            hizali -> t("Kıbleye yöneldiniz ✓")
+                            fark!! > 0 -> t("%s° sağa dönün", abs(fark).roundToInt())
+                            else -> t("%s° sola dönün", abs(fark!!).roundToInt())
                         },
                         fontSize = 26.sp,
                         fontWeight = FontWeight.Bold,
@@ -136,22 +138,20 @@ fun KibleEkrani(yerAdi: String?) {
                         Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(20.dp)).padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Text("Kıble açısı: ${kibleAcisi.roundToInt()}° (${Kible.yonAdi(kibleAcisi)}, kuzeyden saat yönünde)", fontSize = 15.sp)
-                        Text("Kâbe'ye uzaklık: ${"%,d".format(Kible.uzaklikKm(k.enlem, k.boylam).roundToInt()).replace(',', '.')} km", fontSize = 15.sp)
-                        Text("Konum: ${k.kaynak}", fontSize = 13.sp, color = Color.White.copy(alpha = 0.75f))
+                        Text(t("Kıble açısı: %s° (%s, kuzeyden saat yönünde)", kibleAcisi.roundToInt(), Kible.yonAdi(kibleAcisi)), fontSize = 15.sp)
+                        Text(t("Kâbe'ye uzaklık: %s km", "%,d".format(Kible.uzaklikKm(k.enlem, k.boylam).roundToInt()).replace(',', '.')), fontSize = 15.sp)
+                        Text(t("Konum: %s", k.kaynak), fontSize = 13.sp, color = Color.White.copy(alpha = 0.75f))
                     }
 
                     when {
                         !pusula.sensorVar -> UyariKutusu(
-                            "Bu cihazda pusula sensörü yok. Kıble, kuzeyden saat yönünde ${kibleAcisi.roundToInt()}° açıdadır; " +
-                                "kuzeyi başka bir pusulayla bulabilirsiniz."
+                            t("Bu cihazda pusula sensörü yok. Kıble, kuzeyden saat yönünde %s° açıdadır; kuzeyi başka bir pusulayla bulabilirsiniz.", kibleAcisi.roundToInt())
                         )
                         pusula.dusukDogruluk -> UyariKutusu(
-                            "Pusula kalibre değil. Telefonu havada birkaç kez 8 çizerek hareket ettirin ve " +
-                                "mıknatıs, hoparlör, metal eşyalardan uzak tutun."
+                            t("Pusula kalibre değil. Telefonu havada birkaç kez 8 çizerek hareket ettirin ve mıknatıs, hoparlör, metal eşyalardan uzak tutun.")
                         )
                         else -> Text(
-                            "Telefonu yere paralel tutun. Mıknatıslı kılıf ve metal eşyalar pusulayı saptırabilir.",
+                            t("Telefonu yere paralel tutun. Mıknatıslı kılıf ve metal eşyalar pusulayı saptırabilir."),
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.65f),
                             textAlign = TextAlign.Center,
@@ -166,7 +166,7 @@ fun KibleEkrani(yerAdi: String?) {
 @Composable
 private fun UyariKutusu(metin: String) {
     Text(
-        "⚠️ $metin",
+        t("⚠️ %s", metin),
         fontSize = 14.sp,
         modifier = Modifier
             .fillMaxWidth()
@@ -185,7 +185,7 @@ private fun Pusula(yon: Float?, kibleAcisi: Float, hizali: Boolean) {
             .widthIn(max = 340.dp)
             .aspectRatio(1f)
             .semantics {
-                contentDescription = if (yon == null) "Pusula hazırlanıyor" else "Pusula. Telefon ${yon.roundToInt()} derece yönünde, kıble ${kibleAcisi.roundToInt()} derece."
+                contentDescription = if (yon == null) t("Pusula hazırlanıyor") else t("Pusula. Telefon %s derece yönünde, kıble %s derece.", yon.roundToInt(), kibleAcisi.roundToInt())
             },
     ) {
         Canvas(Modifier.fillMaxSize()) {

@@ -1,5 +1,7 @@
 package com.example.ezanvakti.notify
 
+import com.example.ezanvakti.i18n.t
+
 import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -73,9 +75,9 @@ object NotificationScheduler {
     fun createChannel(context: Context) {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Vakit bildirimleri",
+            t("Vakit bildirimleri"),
             NotificationManager.IMPORTANCE_HIGH,
-        ).apply { description = "Namaz vakitleri, iftar/sahur ve kandil bildirimleri" }
+        ).apply { description = t("Namaz vakitleri, iftar/sahur ve kandil bildirimleri") }
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
@@ -106,21 +108,21 @@ object NotificationScheduler {
             val cuma = date.dayOfWeek == java.time.DayOfWeek.FRIDAY
 
             for (vakit in Vakit.bildirimli) {
-                val t = day.time(vakit)
-                val saat = VakitCalculator.clock(t)
+                val zaman = day.time(vakit)
+                val saat = VakitCalculator.clock(zaman)
                 val (title, body) = when {
                     ramazan != null && vakit == Vakit.IMSAK ->
-                        "İmsak vakti" to "Ramazan'ın ${ramazan.gun}. günü: sahur sona erdi, oruç başladı ($saat · $yer)."
+                        t("İmsak vakti") to t("Ramazan'ın %s. günü: sahur sona erdi, oruç başladı (%s · %s).", ramazan.gun, saat, yer)
                     ramazan != null && vakit == Vakit.AKSAM ->
-                        "İftar vakti" to "$yer için iftar: $saat. Hayırlı iftarlar."
+                        t("İftar vakti") to t("%s için iftar: %s. Hayırlı iftarlar.", yer, saat)
                     cuma && vakit == Vakit.OGLE ->
-                        "Cuma vakti girdi" to "$yer için öğle ezanı: $saat. Hayırlı Cumalar."
+                        t("Cuma vakti girdi") to t("%s için öğle ezanı: %s. Hayırlı Cumalar.", yer, saat)
                     kandil != null && vakit == Vakit.AKSAM && ayarlar.kandilBildirimi ->
-                        "Akşam vakti girdi · Bu gece ${kandil.ad}" to "$yer için akşam ezanı: $saat. ${kandil.tebrik}."
+                        t("Akşam vakti girdi · Bu gece %s", kandil.adi) to t("%s için akşam ezanı: %s. %s.", yer, saat, kandil.tebrik)
                     else ->
-                        "${vakit.ad} vakti girdi" to "$yer için ${vakit.ezanAdi} vakti: $saat"
+                        t("%s vakti girdi", vakit.adi) to t("%s için %s vakti: %s", yer, vakit.ezanAdiCeviri, saat)
                 }
-                planlar += Plan(t, title, body, vakit.ordinal)
+                planlar += Plan(zaman, title, body, vakit.ordinal)
             }
 
             if (ayarlar.onceDk > 0) {
@@ -129,24 +131,24 @@ object NotificationScheduler {
                     // Aynı dakikaya düşen özel hatırlatıcılar varken ikinciyi gönderme
                     if (vakit == Vakit.IMSAK && ramazan != null && ayarlar.sahurHatirlatici && dk == SAHUR_ONCESI_DK) continue
                     if (vakit == Vakit.OGLE && cuma && ayarlar.cumaHatirlatici && dk == CUMA_ONCESI_DK) continue
-                    val t = day.time(vakit)
-                    val saat = VakitCalculator.clock(t)
+                    val zaman = day.time(vakit)
+                    val saat = VakitCalculator.clock(zaman)
                     val (title, body) = when {
                         vakit == Vakit.GUNES ->
-                            "Güneşin doğmasına $dk dakika" to "Sabah namazı için son $dk dakika (güneş $saat · $yer)."
+                            t("Güneşin doğmasına %s dakika", dk) to t("Sabah namazı için son %s dakika (güneş %s · %s).", dk, saat, yer)
                         ramazan != null && vakit == Vakit.AKSAM ->
-                            "İftara $dk dakika" to "$yer için iftar: $saat."
+                            t("İftara %s dakika", dk) to t("%s için iftar: %s.", yer, saat)
                         ramazan != null && vakit == Vakit.IMSAK ->
-                            "İmsaka $dk dakika" to "Sahur için son $dk dakika (imsak $saat · $yer)."
+                            t("İmsaka %s dakika", dk) to t("Sahur için son %s dakika (imsak %s · %s).", dk, saat, yer)
                         else ->
-                            "${vakit.ad} vaktine $dk dakika" to "$yer için ${vakit.ezanAdi}: $saat."
+                            t("%s vaktine %s dakika", vakit.adi, dk) to t("%s için %s: %s.", yer, vakit.ezanAdiCeviri, saat)
                     }
-                    planlar += Plan(t - dk * 60_000L, title, body, 20 + vakit.ordinal)
+                    planlar += Plan(zaman - dk * 60_000L, title, body, 20 + vakit.ordinal)
                 }
             }
 
             if (ayarlar.tebrikler) {
-                Tebrikler.gunun(date, dini)?.let { m ->
+                Tebrikler.gunun(date, dini, location.turkiyede)?.let { m ->
                     val saat = date.atTime(TEBRIK_SAATI).atZone(VakitCalculator.zone).toInstant().toEpochMilli()
                     planlar += Plan(saat, m.baslik, m.metin, 13)
                 }
@@ -156,8 +158,8 @@ object NotificationScheduler {
                 val ogle = day.time(Vakit.OGLE)
                 planlar += Plan(
                     ogle - CUMA_ONCESI_DK * 60_000L,
-                    "Cuma namazı yaklaşıyor",
-                    "Cuma vaktine $CUMA_ONCESI_DK dakika kaldı (öğle ${VakitCalculator.clock(ogle)} · $yer).",
+                    t("Cuma namazı yaklaşıyor"),
+                    t("Cuma vaktine %s dakika kaldı (öğle %s · %s).", CUMA_ONCESI_DK, VakitCalculator.clock(ogle), yer),
                     11,
                 )
             }
@@ -165,8 +167,8 @@ object NotificationScheduler {
                 val saat = date.atTime(KEHF_SAATI).atZone(VakitCalculator.zone).toInstant().toEpochMilli()
                 planlar += Plan(
                     maxOf(saat, day.time(Vakit.GUNES) + 30 * 60_000L),
-                    "Hayırlı Cumalar",
-                    "Cuma günü Kehf suresini okumayı unutmayın.",
+                    t("Hayırlı Cumalar"),
+                    t("Cuma günü Kehf suresini okumayı unutmayın."),
                     12,
                 )
             }
@@ -175,8 +177,8 @@ object NotificationScheduler {
                 val imsak = day.time(Vakit.IMSAK)
                 planlar += Plan(
                     imsak - SAHUR_ONCESI_DK * 60_000L,
-                    "Sahur vakti",
-                    "İmsaka $SAHUR_ONCESI_DK dakika kaldı (imsak ${VakitCalculator.clock(imsak)} · $yer).",
+                    t("Sahur vakti"),
+                    t("İmsaka %s dakika kaldı (imsak %s · %s).", SAHUR_ONCESI_DK, VakitCalculator.clock(imsak), yer),
                     10,
                 )
             }

@@ -1,0 +1,5 @@
+<resources>
+    <string name="widget_aciklama">اگلی نماز اور باقی وقت</string>
+    <string name="widget_kucuk_aciklama">اگلی نماز اور الٹی گنتی (چھوٹا)</string>
+    <string name="widget_serit_aciklama">آج کے اوقات ایک قطار میں (پٹی)</string>
+</resources>

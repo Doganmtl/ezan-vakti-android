@@ -1,0 +1,5 @@
+<resources>
+    <string name="widget_aciklama">Следующий намаз и оставшееся время</string>
+    <string name="widget_kucuk_aciklama">Следующий намаз и обратный отсчёт (малый)</string>
+    <string name="widget_serit_aciklama">Время на сегодня в одну строку (полоса)</string>
+</resources>

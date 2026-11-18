@@ -1,6 +1,7 @@
-# Ezan Vakti (Android) — v0.4
+# Ezan Vakti (Android) — v0.6.1
 
-Türkiye'de kullanıcının konumuna göre il/ilçe ezan vakitlerini gösteren Android uygulaması.
+Kullanıcının konumuna göre Diyanet ezan vakitlerini gösteren Android uygulaması: Türkiye'de il/ilçe,
+yurt dışında Diyanet'in vakit yayımladığı ~200 ülkede eyalet/şehir. 12 dil.
 Kotlin + Jetpack Compose. iOS sürümüyle aynı yapı ve aynı tasarım.
 
 ## Windows'ta çalıştırma
@@ -27,6 +28,36 @@ Telefonda *Ayarlar → Telefon hakkında → Yapı numarası*na 7 kez dokunun �
 - Telefonda dikey düzen, tablette/yatayda (600dp+) iki sütun. Vakte göre değişen arka plan, TalkBack etiketleri.
 
 ## Sürüm notları
+**0.6.1**
+- **Geri bildirim** (Ayarlar → Geri bildirim): kullanıcı en fazla 100 karakter yazar; "Gönder" telefonun e-posta uygulamasını
+  doganmutlu.apps@outlook.com adresine hazır mesajla açar (sürüm, dil, ülke ve Android sürümü altına eklenir). Sunucu ya da şifre yok.
+
+**0.6.0**
+- **Harf düzeltmesi**: yurt dışı yer adlarında Türkçe büyük/küçük harf kuralı uygulanmıyor ("Calıfornıa" yerine "California");
+  Türkçe adlar (ülkeler, Türkiye ve KKTC'deki yerler) yine Türkçe kuralla yazılıyor.
+- **Daha derli toplu ana ekran**: geri sayım halkası ve yazılar küçültüldü, vakit satırları sıkılaştırıldı.
+- **Görünüm ayarları**: arka plan teması (vakte göre, gece mavisi, zümrüt, mor, gün batımı, deniz, siyah/OLED) ve
+  vakitlerin dizilişi (alt alta, ikili, üçlü kutucuk).
+- **Widget'lar**: büyük (mevcut), küçük (2×1: sıradaki vakit ve sayaç) ve şerit (4×1: günün vakitleri yan yana);
+  widget arka planı koyu, şeffaf ya da uygulama temasıyla aynı.
+- **Kilit ekranı sayacı**: yalnızca sıradaki vakit, sıradaki vakit + günün vakitleri ya da yalnızca Ramazan'da.
+- Kaynak notu netleştirildi: vakitler namazvakitleri.diyanet.gov.tr ile birebir karşılaştırıldı (Ankara ve Albany, ABD; 19–21 Kasım 2026, birebir aynı).
+
+**0.5.0**
+- **Dünya ülkeleri**: konum seçicide Ülke → il/eyalet → ilçe/şehir; tek bölgeli ülkelerde bölge adımı atlanır.
+  "Konumumu kullan" ve seyahat modu yurt dışında da çalışır (Android'in İngilizce adresi Diyanet'in İngilizce adlarıyla eşleştirilir).
+  Türkiye vakitleri eskisi gibi veri deposundan, yurt dışı vakitleri Diyanet aynasından gelir.
+- **Yerel saat**: her günün UTC farkı Diyanet verisinden okunur (yaz saati dahil); vakitler, geri sayım, bildirimler ve
+  09:00 tebriki seçili konumun saatine göredir. Telefon aynı saat dilimindeyse telefonun dilimi kullanılır.
+- **12 dil**: Türkçe, İngilizce, Arapça, Almanca, Fransızca, İspanyolca, Portekizce, Rusça, Endonezce, Urduca, Farsça, Bengalce.
+  Varsayılan telefonun dili (desteklenmiyorsa İngilizce); Ayarlar → Dil'den değiştirilebilir. Arapça, Urduca ve Farsçada
+  sağdan sola düzen. Çeviriler `i18n/` altında (anahtar: Türkçe metin; eksik çeviri Türkçe görünür). Ana dili olan biri
+  tarafından gözden geçirilmeleri gerekir.
+- **Ülkeye göre hicri takvim**: Ayarlar → Hicri takvim: "Ülkeye göre" (Suudi Arabistan, BAE, Katar, Kuveyt, Bahreyn,
+  Yemen'de Ümmülkurâ, diğerlerinde Diyanet), Diyanet ya da Ümmülkurâ; hilal gözlemine göre ±2 gün düzeltme.
+  Kandil, bayram, Ramazan, imsakiye ve günlük hicri tarih buna göre kayar; dini günlerin listesi her zaman Diyanet'tendir.
+- **Tebrikler**: dini bayram ve kandil tebrikleri her ülkede; Türkiye'nin resmî günleri ve 8 Mart yalnızca Türkiye'deki konumlarda.
+
 **0.4.0**
 - **Vakitten önce hatırlatma**: Kapalı / 10 / 15 / 30 / 45 dk (güneş doğuşu için "sabah namazı için son dakikalar").
 - **Namazda sessize alma**: vakit girince "Rahatsız Etmeyin" (öncelikli) 20/30/45 dk; telefon zaten sessizse dokunmaz,

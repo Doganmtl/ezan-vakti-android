@@ -8,7 +8,10 @@ import com.example.ezanvakti.data.DiniGunlerRepository
 import com.example.ezanvakti.data.PlaceMatcher
 import com.example.ezanvakti.data.PrayerTimesProvider
 import com.example.ezanvakti.data.Storage
+import com.example.ezanvakti.i18n.Dil
+import com.example.ezanvakti.i18n.t
 import com.example.ezanvakti.location.LocationResolver
+import com.example.ezanvakti.model.HicriTakvim
 import com.example.ezanvakti.model.DailyTimes
 import com.example.ezanvakti.model.DiniGunlerVerisi
 import com.example.ezanvakti.model.Place
@@ -56,6 +59,18 @@ data class UiState(
     val kayitliKonumlar: List<SelectedLocation> = emptyList(),
     /** Seyahat modu: başka bir ilde olunduğu anlaşılınca önerilen konum. */
     val konumOnerisi: SelectedLocation? = null,
+    /** Hicri takvim seçimi ("" = ülkeye göre otomatik) ve gün düzeltmesi. */
+    val hicriTakvim: String = "",
+    val hicriDuzeltme: Int = 0,
+    /** Seçimden ve ülkeden çıkan etkin takvim. */
+    val takvimTuru: HicriTakvim.Tur = HicriTakvim.Tur.DIYANET,
+    /** Uygulama dili seçimi ("" = telefon dili). */
+    val dil: String = "",
+    /** Görünüm: arka plan teması, vakit dizilişi, widget arka planı, kilit ekranı sayacı içeriği. */
+    val arkaPlan: String = "vakit",
+    val vakitDuzeni: String = "liste",
+    val widgetStili: String = "koyu",
+    val canliSayacModu: String = "siradaki",
     /** Yalnızca geliştirici sürümünde: bugünü Ramazan'ın 5. günü gibi gösterir (arayüz testi için). */
     val ramazanOnizleme: Boolean = false,
 ) {
@@ -86,6 +101,14 @@ class PrayerViewModel(app: Application) : AndroidViewModel(app) {
             seyahatModu = storage.seyahatModu,
             kayitliKonumlar = storage.kayitliKonumlar,
             dini = diniRepo.loadLocal(),
+            hicriTakvim = storage.hicriTakvim,
+            hicriDuzeltme = storage.hicriDuzeltme,
+            takvimTuru = storage.takvimAyari().tur,
+            dil = Dil.secim,
+            arkaPlan = storage.arkaPlan,
+            vakitDuzeni = storage.vakitDuzeni,
+            widgetStili = storage.widgetStili,
+            canliSayacModu = storage.canliSayacModu,
         )
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
@@ -122,31 +145,19 @@ class PrayerViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(phase = Phase.Locating) }
             try {
                 val area = locationResolver.resolve()
-                val states = provider.states()
-                val state = PlaceMatcher.bestMatch(area.il, states)
-                if (state == null) {
-                    _state.update { it.copy(phase = Phase.NeedsLocation("\"${area.il}\" ili listede bulunamadı. Lütfen elle seçin.")) }
-                    return@launch
-                }
-                val cities = provider.cities(state.id)
-                val city = PlaceMatcher.bestMatch(area.ilce, cities) ?: PlaceMatcher.center(state, cities)
-                if (city == null) {
-                    _state.update { it.copy(phase = Phase.NeedsLocation(null)) }
-                    return@launch
-                }
-                val found = SelectedLocation(state, city)
+                val found = konumuEslestir(area) ?: return@launch
                 val unchanged = _state.value.location == found
                 select(found)
                 // Konum değişmediyse de kullanıcıya bulunduğunu bildir (değiştiyse select() zaten bildiriyor).
-                if (unchanged) _state.update { it.copy(message = "Konumunuz doğrulandı: ${found.title}") }
+                if (unchanged) _state.update { it.copy(message = t("Konumunuz doğrulandı: %s", found.title)) }
             } catch (e: Exception) {
-                val message = e.message ?: "Konum alınamadı."
+                val message = e.message ?: t("Konum alınamadı.")
                 _state.update {
                     when {
                         it.location == null -> it.copy(phase = Phase.NeedsLocation(message))
                         it.days.isNotEmpty() -> it.copy(
                             phase = Phase.Ready,
-                            message = "Konum bulunamadı. ${it.location.title} vakitleri gösterilmeye devam ediyor.",
+                            message = t("Konum bulunamadı. %s vakitleri gösterilmeye devam ediyor.", it.location.title),
                         )
                         else -> it.copy(phase = Phase.Failed(message))
                     }
@@ -155,13 +166,47 @@ class PrayerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Android'in verdiği adresi Diyanet listesindeki konuma çevirir. Bulunamazsa ekranı
+     * "elle seçin" durumuna alır ve null döner. [sessiz] ise (seyahat modu) ekrana dokunmaz.
+     */
+    private suspend fun konumuEslestir(area: LocationResolver.Area, sessiz: Boolean = false): SelectedLocation? {
+        fun eksik(mesaj: String?): SelectedLocation? {
+            if (!sessiz) _state.update { it.copy(phase = if (it.days.isNotEmpty()) Phase.Ready else Phase.NeedsLocation(mesaj), message = if (it.days.isNotEmpty()) mesaj else null) }
+            return null
+        }
+        if (area.turkiye) {
+            val state = PlaceMatcher.bestMatch(area.il, provider.states())
+                ?: return eksik(t("\"%s\" ili listede bulunamadı. Lütfen elle seçin.", area.il))
+            val cities = provider.cities(state.id)
+            val city = PlaceMatcher.bestMatch(area.ilce, cities) ?: PlaceMatcher.center(state, cities) ?: return eksik(null)
+            return SelectedLocation(state, city)
+        }
+        val ulke = PlaceMatcher.bestMatchAny(listOf(area.ulke), provider.countries())
+            ?: return eksik(t("%s için Diyanet vakitleri bulunamadı. Lütfen listeden en yakın şehri seçin.", area.ulke ?: area.ulkeKodu))
+        val states = provider.states(ulke.id)
+        val state = (if (states.size == 1) states.first() else PlaceMatcher.bestMatchAny(area.ilAdaylari, states))
+            ?: return eksik(t("Bölgeniz listede bulunamadı. Lütfen listeden en yakın şehri seçin."))
+        val cities = provider.cities(state.id)
+        val city = PlaceMatcher.bestMatchAny(area.ilceAdaylari, cities) ?: PlaceMatcher.center(state, cities) ?: return eksik(null)
+        return SelectedLocation(state, city, ulke)
+    }
+
     fun select(location: SelectedLocation) {
         val previous = _state.value.location
         if (previous != null && previous != location) {
-            _state.update { it.copy(message = "Konum güncellendi: ${location.title}") }
+            _state.update { it.copy(message = t("Konum güncellendi: %s", location.title)) }
         }
         storage.location = location
-        _state.update { it.copy(location = location, days = storage.cachedTimes(location.city.id).orEmpty()) }
+        // Ülke değiştiyse saat dilimi ve hicri takvim de değişir.
+        _state.update {
+            it.copy(
+                location = location,
+                days = storage.cachedTimes(location.city.id).orEmpty(),
+                dini = diniRepo.loadLocal(),
+                takvimTuru = storage.takvimAyari().tur,
+            )
+        }
         reload()
     }
 
@@ -180,8 +225,9 @@ class PrayerViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             if (_state.value.days.isEmpty()) _state.update { it.copy(phase = Phase.Loading) }
             try {
-                val fresh = provider.times(location.city.id).sortedBy { it.epochDay }
-                storage.saveTimes(fresh, location.city.id)
+                val ham = provider.times(location.city.id, location.ulkeId).sortedBy { it.epochDay }
+                storage.saveTimes(ham, location.city.id)
+                val fresh = storage.hazirla(ham)
                 VakitWidget.guncelle(getApplication())
                 _state.update {
                     it.copy(days = fresh, lastUpdated = System.currentTimeMillis(), phase = Phase.Ready)
@@ -191,9 +237,9 @@ class PrayerViewModel(app: Application) : AndroidViewModel(app) {
                 // Önbellekte veri varsa onu kullanmaya devam et ve kullanıcıyı bilgilendir.
                 _state.update {
                     if (it.days.isEmpty()) {
-                        it.copy(phase = Phase.Failed(e.message ?: "Vakitler alınamadı."))
+                        it.copy(phase = Phase.Failed(e.message ?: t("Vakitler alınamadı.")))
                     } else {
-                        it.copy(phase = Phase.Ready, message = "Vakitler güncellenemedi; kayıtlı vakitler gösteriliyor.")
+                        it.copy(phase = Phase.Ready, message = t("Vakitler güncellenemedi; kayıtlı vakitler gösteriliyor."))
                     }
                 }
             }
@@ -289,7 +335,7 @@ class PrayerViewModel(app: Application) : AndroidViewModel(app) {
     fun konumuKaydet(location: SelectedLocation) {
         val liste = (storage.kayitliKonumlar.filter { it.city.id != location.city.id } + location).takeLast(MAX_KAYITLI)
         storage.kayitliKonumlar = liste
-        _state.update { it.copy(kayitliKonumlar = liste, message = "Kaydedildi: ${location.title}") }
+        _state.update { it.copy(kayitliKonumlar = liste, message = t("Kaydedildi: %s", location.title)) }
     }
 
     fun konumuSil(location: SelectedLocation) {
@@ -317,11 +363,9 @@ class PrayerViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             runCatching {
                 val area = locationResolver.resolve()
-                val il = PlaceMatcher.bestMatch(area.il, provider.states()) ?: return@runCatching
-                if (il.id == mevcut.state.id || il.id == reddedilenIlId) return@runCatching
-                val ilceler = provider.cities(il.id)
-                val ilce = PlaceMatcher.bestMatch(area.ilce, ilceler) ?: PlaceMatcher.center(il, ilceler) ?: return@runCatching
-                _state.update { it.copy(konumOnerisi = SelectedLocation(il, ilce)) }
+                val bulunan = konumuEslestir(area, sessiz = true) ?: return@runCatching
+                if (bulunan.state.id == mevcut.state.id || bulunan.state.id == reddedilenIlId) return@runCatching
+                _state.update { it.copy(konumOnerisi = bulunan) }
             }
         }
     }
@@ -341,7 +385,71 @@ class PrayerViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(message = null) }
     }
 
+    // MARK: Görünüm
+
+    fun setArkaPlan(kod: String) {
+        storage.arkaPlan = kod
+        _state.update { it.copy(arkaPlan = kod) }
+        if (storage.widgetStili == "tema") VakitWidget.guncelle(getApplication())
+    }
+
+    fun setVakitDuzeni(kod: String) {
+        storage.vakitDuzeni = kod
+        _state.update { it.copy(vakitDuzeni = kod) }
+    }
+
+    fun setWidgetStili(kod: String) {
+        storage.widgetStili = kod
+        _state.update { it.copy(widgetStili = kod) }
+        VakitWidget.guncelle(getApplication())
+    }
+
+    fun setCanliSayacModu(kod: String) {
+        storage.canliSayacModu = kod
+        _state.update { it.copy(canliSayacModu = kod) }
+        Tazeleyici.calistir(getApplication())
+    }
+
+    // MARK: Hicri takvim ve dil
+
+    fun setHicriTakvim(secim: String) {
+        storage.hicriTakvim = secim
+        takvimiYenidenUygula()
+    }
+
+    fun setHicriDuzeltme(gun: Int) {
+        storage.hicriDuzeltme = gun
+        takvimiYenidenUygula()
+    }
+
+    private fun takvimiYenidenUygula() {
+        val location = _state.value.location
+        _state.update {
+            it.copy(
+                hicriTakvim = storage.hicriTakvim,
+                hicriDuzeltme = storage.hicriDuzeltme,
+                takvimTuru = storage.takvimAyari().tur,
+                dini = diniRepo.loadLocal(),
+                days = location?.let { l -> storage.cachedTimes(l.city.id) } ?: it.days,
+            )
+        }
+        updateNotifications()
+    }
+
+    /** Dili kaydeder; ekran yeniden oluşturulunca (Activity.recreate) yeni dil görünür. */
+    fun setDil(kod: String) {
+        Dil.kaydet(getApplication(), kod)
+        NotificationScheduler.createChannel(getApplication())
+        _state.update { it.copy(dil = kod) }
+        updateNotifications()
+    }
+
     // Konum seçici için
-    suspend fun states(): List<Place> = provider.states()
-    suspend fun cities(stateId: Int): List<Place> = provider.cities(stateId)
+    suspend fun countries(): List<Place> = provider.countries()
+    suspend fun states(countryId: Int = SelectedLocation.TURKIYE_ID): List<Place> = provider.states(countryId)
+    suspend fun cities(stateId: Int, countryId: Int = SelectedLocation.TURKIYE_ID): List<Place> =
+        provider.cities(stateId).let { list ->
+            // Türkiye'deki ilçe adları her dilde Türkçe yazılır.
+            if (countryId == SelectedLocation.TURKIYE_ID) list.map { it.copy(nameEn = null) } else list
+        }
 }

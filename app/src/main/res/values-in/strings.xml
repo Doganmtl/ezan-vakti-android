@@ -1,0 +1,5 @@
+<resources>
+    <string name="widget_aciklama">Salat berikutnya dan sisa waktu</string>
+    <string name="widget_kucuk_aciklama">Salat berikutnya dan hitung mundur (kecil)</string>
+    <string name="widget_serit_aciklama">Jadwal hari ini berjajar (strip)</string>
+</resources>

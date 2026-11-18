@@ -1,5 +1,7 @@
 package com.example.ezanvakti.ui
 
+import com.example.ezanvakti.i18n.t
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,15 +40,15 @@ import com.example.ezanvakti.data.EkstraDepo
 /** Kaza kalemleri: anahtar (kayıt adı), görünen ad, açıklama. */
 private data class KazaKalemi(val anahtar: String, val ad: String, val aciklama: String)
 
-private val namazKalemleri = listOf(
-    KazaKalemi("sabah", "Sabah", "2 rekât farz"),
-    KazaKalemi("ogle", "Öğle", "4 rekât farz"),
-    KazaKalemi("ikindi", "İkindi", "4 rekât farz"),
-    KazaKalemi("aksam", "Akşam", "3 rekât farz"),
-    KazaKalemi("yatsi", "Yatsı", "4 rekât farz"),
-    KazaKalemi("vitir", "Vitir", "3 rekât vacip"),
+private val namazKalemleri get() = listOf(
+    KazaKalemi("sabah", t("Sabah"), t("2 rekât farz")),
+    KazaKalemi("ogle", t("Öğle"), t("4 rekât farz")),
+    KazaKalemi("ikindi", t("İkindi"), t("4 rekât farz")),
+    KazaKalemi("aksam", t("Akşam"), t("3 rekât farz")),
+    KazaKalemi("yatsi", t("Yatsı"), t("4 rekât farz")),
+    KazaKalemi("vitir", t("Vitir"), t("3 rekât vacip")),
 )
-private val orucKalemi = KazaKalemi("oruc", "Oruç", "Ramazan orucu kazası")
+private val orucKalemi get() = KazaKalemi("oruc", t("Oruç"), t("Ramazan orucu kazası"))
 
 @Composable
 fun KazaEkrani(onGeri: () -> Unit) {
@@ -70,10 +72,9 @@ fun KazaEkrani(onGeri: () -> Unit) {
             Modifier.widthIn(max = 640.dp).fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            AltSayfaBasligi("Kaza takibi", onGeri)
+            AltSayfaBasligi(t("Kaza takibi"), onGeri)
             Text(
-                "Kılamadığınız namaz ve tutamadığınız oruçları ekleyin; kaza ettikçe − ile düşürün. " +
-                    "Sayıya dokunarak toplu değer girebilirsiniz.",
+                t("Kılamadığınız namaz ve tutamadığınız oruçları ekleyin; kaza ettikçe − ile düşürün. Sayıya dokunarak toplu değer girebilirsiniz."),
                 fontSize = 14.sp,
                 color = Color.White.copy(alpha = 0.8f),
             )
@@ -81,19 +82,19 @@ fun KazaEkrani(onGeri: () -> Unit) {
                 Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(20.dp)).padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Kalan kaza namazı", fontSize = 16.sp, modifier = Modifier.weight(1f))
+                Text(t("Kalan kaza namazı"), fontSize = 16.sp, modifier = Modifier.weight(1f))
                 Text("$toplamNamaz", fontSize = 26.sp, fontWeight = FontWeight.Bold)
             }
 
-            Text("Namaz", fontSize = 14.sp, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(top = 6.dp))
+            Text(t("Namaz"), fontSize = 14.sp, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(top = 6.dp))
             namazKalemleri.forEach { k ->
                 KazaSatiri(k, degerler[k.anahtar] ?: 0, onDegis = { ayarla(k, it) }, onDuzenle = { duzenlenen = k })
             }
-            Text("Oruç", fontSize = 14.sp, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(top = 6.dp))
+            Text(t("Oruç"), fontSize = 14.sp, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(top = 6.dp))
             KazaSatiri(orucKalemi, degerler[orucKalemi.anahtar] ?: 0, onDegis = { ayarla(orucKalemi, it) }, onDuzenle = { duzenlenen = orucKalemi })
 
             Text(
-                "Kayıtlar yalnızca bu telefonda tutulur.",
+                t("Kayıtlar yalnızca bu telefonda tutulur."),
                 fontSize = 12.sp,
                 color = Color.White.copy(alpha = 0.6f),
                 modifier = Modifier.padding(top = 8.dp),
@@ -103,9 +104,9 @@ fun KazaEkrani(onGeri: () -> Unit) {
 
     duzenlenen?.let { k ->
         SayiDialog(
-            baslik = "${k.ad} kazası",
+            baslik = t("%s kazası", k.ad),
             ilk = degerler[k.anahtar] ?: 0,
-            aciklama = "Kalan ${k.ad.lowercase(com.example.ezanvakti.model.VakitCalculator.tr)} kaza sayısını girin.",
+            aciklama = t("Kalan %s kaza sayısını girin.", if (com.example.ezanvakti.i18n.Dil.turkce) k.ad.lowercase(com.example.ezanvakti.model.VakitCalculator.tr) else k.ad),
             onTamam = { ayarla(k, it); duzenlenen = null },
             onKapat = { duzenlenen = null },
         )
@@ -125,7 +126,7 @@ private fun KazaSatiri(k: KazaKalemi, deger: Int, onDegis: (Int) -> Unit, onDuze
             Text(k.ad, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
             Text(k.aciklama, fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
         }
-        YuvarlakDugme("−", "${k.ad} kazasını bir azalt", enabled = deger > 0) { onDegis(deger - 1) }
+        YuvarlakDugme("−", t("%s kazasını bir azalt", k.ad), enabled = deger > 0) { onDegis(deger - 1) }
         Text(
             "$deger",
             fontSize = 22.sp,
@@ -135,10 +136,10 @@ private fun KazaSatiri(k: KazaKalemi, deger: Int, onDegis: (Int) -> Unit, onDuze
                 .widthIn(min = 64.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .clickable(onClick = onDuzenle)
-                .semantics { contentDescription = "${k.ad}: $deger. Değiştirmek için dokunun." }
+                .semantics { contentDescription = t("%s: %s. Değiştirmek için dokunun.", k.ad, deger) }
                 .padding(horizontal = 6.dp, vertical = 4.dp),
         )
-        YuvarlakDugme("+", "${k.ad} kazasını bir artır") { onDegis(deger + 1) }
+        YuvarlakDugme("+", t("%s kazasını bir artır", k.ad)) { onDegis(deger + 1) }
     }
 }
 
@@ -162,7 +163,7 @@ private fun YuvarlakDugme(simge: String, aciklama: String, enabled: Boolean = tr
 fun AltSayfaBasligi(baslik: String, onGeri: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            "‹ Geri",
+            t("‹ Geri"),
             fontSize = 16.sp,
             modifier = Modifier
                 .clip(RoundedCornerShape(50))

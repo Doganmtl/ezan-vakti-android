@@ -1,5 +1,9 @@
 package com.example.ezanvakti.ui
 
+import com.example.ezanvakti.i18n.Dil
+import com.example.ezanvakti.i18n.t
+import com.example.ezanvakti.model.HicriTakvim
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,8 +48,11 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
-private val ayBasligi = DateTimeFormatter.ofPattern("MMMM yyyy", VakitCalculator.tr)
-private val GUN_KISALTMALARI = listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
+/** Ay başlığı ve Pazartesi'den başlayan gün kısaltmaları, etkin dilde. */
+private val ayBasligi: DateTimeFormatter get() = DateTimeFormatter.ofPattern("LLLL yyyy", Dil.locale)
+private val GUN_KISALTMALARI: List<String>
+    get() = if (Dil.turkce) listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
+    else java.time.DayOfWeek.values().map { it.getDisplayName(java.time.format.TextStyle.SHORT_STANDALONE, Dil.locale) }
 
 /**
  * Dini günler takvimi: aylık görünüm (kandil, bayram, arefe, Ramazan işaretli),
@@ -94,8 +101,8 @@ fun TakvimEkrani(
             RamazanGirisi(dini, bugun, onizlemeBaslangic, onImsakiye)
             YaklasanGunler(dini, bugun, onSec = sec)
             Text(
-                "Kaynak: ${dini.kaynak ?: "Diyanet İşleri Başkanlığı"}." +
-                    (dini.gecerliOlduguSon?.let { " Takvim ${LocalDate.parse(it).uzun()} tarihine kadar." } ?: ""),
+                t("Kaynak: %s.", t(dini.kaynak ?: "Diyanet İşleri Başkanlığı")) +
+                    (dini.gecerliOlduguSon?.let { t(" Takvim %s tarihine kadar.", LocalDate.parse(it).uzun()) } ?: ""),
                 fontSize = 12.sp,
                 color = Color.White.copy(alpha = 0.6f),
             )
@@ -142,7 +149,7 @@ private fun AyTakvimi(
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onOnceki) { Text("‹", fontSize = 24.sp, color = Color.White) }
             Text(
-                ay.format(ayBasligi).trTitle(),
+                ay.format(ayBasligi).replaceFirstChar { it.titlecase(Dil.locale) },
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -150,7 +157,7 @@ private fun AyTakvimi(
             )
             TextButton(onClick = onSonraki) { Text("›", fontSize = 24.sp, color = Color.White) }
             Text(
-                "Bugün",
+                t("Bugün"),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White.copy(alpha = if (bugundeyiz) 0.45f else 1f),
@@ -186,10 +193,10 @@ private fun AyTakvimi(
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Lejant(com.example.ezanvakti.model.DiniGunTuru.KANDIL.renk, "Kandil")
-            Lejant(com.example.ezanvakti.model.DiniGunTuru.BAYRAM.renk, "Bayram")
-            Lejant(com.example.ezanvakti.model.DiniGunTuru.AREFE.renk, "Arefe")
-            Lejant(RamazanRengi, "Ramazan")
+            Lejant(com.example.ezanvakti.model.DiniGunTuru.KANDIL.renk, t("Kandil"))
+            Lejant(com.example.ezanvakti.model.DiniGunTuru.BAYRAM.renk, t("Bayram"))
+            Lejant(com.example.ezanvakti.model.DiniGunTuru.AREFE.renk, t("Arefe"))
+            Lejant(RamazanRengi, t("Ramazan"))
         }
     }
 }
@@ -198,7 +205,7 @@ private fun AyTakvimi(
 private fun Lejant(renk: Color, ad: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(8.dp).background(renk, CircleShape))
-        Text(" $ad", fontSize = 11.sp, color = Color.White.copy(alpha = 0.75f))
+        Text(t(" %s", ad), fontSize = 11.sp, color = Color.White.copy(alpha = 0.75f))
     }
 }
 
@@ -214,9 +221,9 @@ private fun GunHucresi(
     val olaylar = dini.on(tarih)
     val aciklama = buildString {
         append(tarih.uzun())
-        if (bugunMu) append(", bugün")
-        if (ramazan) append(", Ramazan")
-        olaylar.forEach { append(", ").append(it.ad) }
+        if (bugunMu) append(t(", bugün"))
+        if (ramazan) append(t(", Ramazan"))
+        olaylar.forEach { append(", ").append(it.adi) }
     }
     Column(
         Modifier
@@ -252,7 +259,7 @@ private fun GunHucresi(
 @Composable
 private fun GunAyrintisi(tarih: LocalDate, bugun: LocalDate, dini: DiniGunlerVerisi, days: List<DailyTimes>, ramazan: Boolean) {
     val olaylar = dini.on(tarih)
-    val hicri = days.firstOrNull { it.epochDay == tarih.toEpochDay() }?.hijri ?: olaylar.firstOrNull()?.hicri
+    val hicri = HicriTakvim.goster(days.firstOrNull { it.epochDay == tarih.toEpochDay() }?.hijri ?: olaylar.firstOrNull()?.hicri)
     Column(
         Modifier
             .fillMaxWidth()
@@ -264,13 +271,13 @@ private fun GunAyrintisi(tarih: LocalDate, bugun: LocalDate, dini: DiniGunlerVer
         val alt = listOfNotNull(hicri, kalanGunMetni(bugun, tarih).takeIf { tarih != bugun })
         if (alt.isNotEmpty()) Text(alt.joinToString(" · "), fontSize = 13.sp, color = Color.White.copy(alpha = 0.75f))
         if (ramazan && olaylar.none { it.turu == com.example.ezanvakti.model.DiniGunTuru.RAMAZAN }) {
-            Text("🌙 Ramazan (oruç günü)", fontSize = 15.sp)
+            Text(t("🌙 Ramazan (oruç günü)"), fontSize = 15.sp)
         }
         olaylar.forEach { g ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(10.dp).background(g.turu.renk, CircleShape))
                 Column(Modifier.padding(start = 10.dp)) {
-                    Text(if (g.turu == com.example.ezanvakti.model.DiniGunTuru.KANDIL) "${g.ad} (akşamı)" else g.ad, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(if (g.turu == com.example.ezanvakti.model.DiniGunTuru.KANDIL) t("%s (akşamı)", g.adi) else g.adi, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     if (g.turu == com.example.ezanvakti.model.DiniGunTuru.KANDIL || g.turu == com.example.ezanvakti.model.DiniGunTuru.BAYRAM) {
                         Text(g.tebrik, fontSize = 13.sp, color = Color.White.copy(alpha = 0.75f))
                     }
@@ -278,7 +285,7 @@ private fun GunAyrintisi(tarih: LocalDate, bugun: LocalDate, dini: DiniGunlerVer
             }
         }
         if (olaylar.isEmpty() && !ramazan) {
-            Text("Bu tarihte dini gün yok.", fontSize = 13.sp, color = Color.White.copy(alpha = 0.6f))
+            Text(t("Bu tarihte dini gün yok."), fontSize = 13.sp, color = Color.White.copy(alpha = 0.6f))
         }
     }
 }
@@ -292,9 +299,9 @@ private fun YaklasanGunler(dini: DiniGunlerVerisi, bugun: LocalDate, onSec: (Loc
             .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(20.dp))
             .padding(vertical = 8.dp),
     ) {
-        Text("Yaklaşan Dini Günler", fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        Text(t("Yaklaşan Dini Günler"), fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
         if (liste.isEmpty()) {
-            Text("Takvimde ileri tarihli kayıt yok.", fontSize = 13.sp, modifier = Modifier.padding(16.dp))
+            Text(t("Takvimde ileri tarihli kayıt yok."), fontSize = 13.sp, modifier = Modifier.padding(16.dp))
         }
         liste.forEach { g ->
             Row(
@@ -306,7 +313,7 @@ private fun YaklasanGunler(dini: DiniGunlerVerisi, bugun: LocalDate, onSec: (Loc
             ) {
                 Box(Modifier.size(10.dp).background(g.turu.renk, CircleShape))
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                    Text(g.ad, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(g.adi, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Text(g.date.uzun(), fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
                 }
                 Text(kalanGunMetni(bugun, g.date), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
@@ -319,10 +326,10 @@ private fun YaklasanGunler(dini: DiniGunlerVerisi, bugun: LocalDate, onSec: (Loc
 private fun RamazanGirisi(dini: DiniGunlerVerisi, bugun: LocalDate, onizlemeBaslangic: LocalDate?, onImsakiye: () -> Unit) {
     val donem = dini.ramazan(bugun) ?: dini.sonrakiRamazan(bugun)
     val metin = when {
-        onizlemeBaslangic != null -> "Ramazan önizlemesi açık (geliştirici)."
+        onizlemeBaslangic != null -> t("Ramazan önizlemesi açık (geliştirici).")
         donem == null -> return
-        donem.contains(bugun) -> "Ramazan'ın ${donem.gun(bugun)}. günü · ${donem.end.uzun()} son oruç."
-        else -> "${donem.hicriYil} Ramazanı ${donem.start.uzun()} başlıyor · ${ChronoUnit.DAYS.between(bugun, donem.start)} gün kaldı. İlk sahur önceki gece."
+        donem.contains(bugun) -> t("Ramazan'ın %s. günü · %s son oruç.", donem.gun(bugun), donem.end.uzun())
+        else -> t("%s Ramazanı %s başlıyor · %s gün kaldı. İlk sahur önceki gece.", donem.hicriYil, donem.start.uzun(), ChronoUnit.DAYS.between(bugun, donem.start))
     }
     Row(
         Modifier
@@ -335,7 +342,7 @@ private fun RamazanGirisi(dini: DiniGunlerVerisi, bugun: LocalDate, onizlemeBasl
     ) {
         Text("🌙", fontSize = 24.sp)
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text("Ramazan ve İmsakiye", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(t("Ramazan ve İmsakiye"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Text(metin, fontSize = 13.sp, color = Color.White.copy(alpha = 0.85f))
         }
         Text("›", fontSize = 22.sp)

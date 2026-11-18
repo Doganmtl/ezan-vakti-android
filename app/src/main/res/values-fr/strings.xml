@@ -1,0 +1,5 @@
+<resources>
+    <string name="widget_aciklama">Prochaine prière et temps restant</string>
+    <string name="widget_kucuk_aciklama">Prochaine prière et compte à rebours (petit)</string>
+    <string name="widget_serit_aciklama">Horaires du jour côte à côte (bandeau)</string>
+</resources>

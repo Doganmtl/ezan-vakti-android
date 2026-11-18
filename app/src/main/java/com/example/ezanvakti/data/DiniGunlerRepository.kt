@@ -2,6 +2,7 @@ package com.example.ezanvakti.data
 
 import android.content.Context
 import com.example.ezanvakti.model.DiniGunlerVerisi
+import com.example.ezanvakti.model.HicriTakvim
 import kotlinx.serialization.decodeFromString
 import java.io.File
 
@@ -15,7 +16,11 @@ import java.io.File
 class DiniGunlerRepository(private val context: Context) {
     private val cacheFile = File(context.filesDir, "dini-gunler.json")
 
-    fun loadLocal(): DiniGunlerVerisi {
+    /** Seçili konumun hicri takvimine uyarlanmış dini günler (bkz. [HicriTakvim]). */
+    fun loadLocal(): DiniGunlerVerisi = HicriTakvim.uyarla(loadRaw(), Storage(context).takvimAyari())
+
+    /** Diyanet'in yayımladığı haliyle (Türkiye takvimi). */
+    fun loadRaw(): DiniGunlerVerisi {
         val bundled = runCatching {
             context.assets.open("dini_gunler.json").bufferedReader().use { Http.json.decodeFromString<DiniGunlerVerisi>(it.readText()) }
         }.getOrNull()
@@ -31,6 +36,6 @@ class DiniGunlerRepository(private val context: Context) {
         }.getOrNull() ?: return null
         if (remote.gunler.isEmpty() || remote.guncelleme <= current.guncelleme) return null
         runCatching { cacheFile.writeText(Http.json.encodeToString(DiniGunlerVerisi.serializer(), remote)) }
-        return remote
+        return loadLocal()
     }
 }

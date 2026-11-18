@@ -1,0 +1,5 @@
+<resources>
+    <string name="widget_aciklama">Próxima oración y tiempo restante</string>
+    <string name="widget_kucuk_aciklama">Próxima oración y cuenta atrás (pequeño)</string>
+    <string name="widget_serit_aciklama">Horarios de hoy uno al lado del otro (franja)</string>
+</resources>

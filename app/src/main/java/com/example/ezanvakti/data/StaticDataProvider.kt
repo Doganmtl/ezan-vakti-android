@@ -1,7 +1,9 @@
 package com.example.ezanvakti.data
 
+import com.example.ezanvakti.i18n.t
 import com.example.ezanvakti.model.DailyTimes
 import com.example.ezanvakti.model.Place
+import com.example.ezanvakti.model.SelectedLocation
 import com.example.ezanvakti.model.VakitCalculator
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
@@ -26,20 +28,26 @@ internal data class StaticTimes(val guncelleme: String? = null, val gunler: List
 class StaticDataProvider(baseUrl: String) : PrayerTimesProvider {
     private val base = baseUrl.trimEnd('/') + "/v1"
 
-    override suspend fun states(): List<Place> =
-        Http.json.decodeFromString<List<StaticPlace>>(Http.request("$base/iller.json"))
+    /** Veri deposu yalnızca Türkiye'yi kapsar; ülke listesi ve yurt dışı vakitleri sıradaki kaynaktan gelir. */
+    override suspend fun countries(): List<Place> = throw ProviderException(t("Veri alınamadı."))
+
+    override suspend fun states(countryId: Int): List<Place> {
+        if (countryId != SelectedLocation.TURKIYE_ID) throw ProviderException(t("Veri alınamadı."))
+        return Http.json.decodeFromString<List<StaticPlace>>(Http.request("$base/iller.json"))
             .map { Place(it.id, it.ad) }
+    }
 
     override suspend fun cities(stateId: Int): List<Place> =
         Http.json.decodeFromString<List<StaticPlace>>(Http.request("$base/ilceler/$stateId.json"))
             .map { Place(it.id, it.ad) }
 
-    override suspend fun times(cityId: Int): List<DailyTimes> {
+    override suspend fun times(cityId: Int, countryId: Int): List<DailyTimes> {
+        if (countryId != SelectedLocation.TURKIYE_ID) throw ProviderException(t("Veri alınamadı."))
         val data = Http.json.decodeFromString<StaticTimes>(Http.request("$base/vakitler/$cityId.json"))
         val days = data.gunler.mapNotNull { VakitCalculator.parse(it.t, it.v, it.h) }
         // Dosya var ama bugünden sonrasını kapsamıyorsa (güncelleme durmuşsa) yedeğe düşülsün.
         val today = VakitCalculator.epochDay(System.currentTimeMillis())
-        if (days.none { it.epochDay >= today + 1 }) throw ProviderException("Veri dosyası güncel değil.")
+        if (days.none { it.epochDay >= today + 1 }) throw ProviderException(t("Veri dosyası güncel değil."))
         return days
     }
 }
@@ -62,10 +70,11 @@ class FallbackProvider(private val providers: List<PrayerTimesProvider>) : Praye
                 if (firstError == null) firstError = e
             }
         }
-        throw firstError ?: ProviderException("Veri alınamadı.")
+        throw firstError ?: ProviderException(t("Veri alınamadı."))
     }
 
-    override suspend fun states() = firstSuccess { it.states() }
+    override suspend fun countries() = firstSuccess { it.countries() }
+    override suspend fun states(countryId: Int) = firstSuccess { it.states(countryId) }
     override suspend fun cities(stateId: Int) = firstSuccess { it.cities(stateId) }
-    override suspend fun times(cityId: Int) = firstSuccess { it.times(cityId) }
+    override suspend fun times(cityId: Int, countryId: Int) = firstSuccess { it.times(cityId, countryId) }
 }

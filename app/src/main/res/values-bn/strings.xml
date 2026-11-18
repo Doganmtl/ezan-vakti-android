@@ -1,0 +1,5 @@
+<resources>
+    <string name="widget_aciklama">পরবর্তী নামাজ ও বাকি সময়</string>
+    <string name="widget_kucuk_aciklama">পরবর্তী নামাজ ও কাউন্টডাউন (ছোট)</string>
+    <string name="widget_serit_aciklama">আজকের সময় পাশাপাশি (স্ট্রিপ)</string>
+</resources>

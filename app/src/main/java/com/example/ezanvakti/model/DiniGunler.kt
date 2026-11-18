@@ -1,5 +1,6 @@
 package com.example.ezanvakti.model
 
+import com.example.ezanvakti.i18n.t
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -15,6 +16,8 @@ enum class DiniGunTuru(val key: String, val etiket: String, val emoji: String) {
     companion object {
         fun from(key: String) = entries.firstOrNull { it.key == key } ?: GUN
     }
+
+    val etiketi: String get() = t(etiket)
 }
 
 /**
@@ -31,13 +34,17 @@ data class DiniGun(
     val date: LocalDate get() = LocalDate.parse(tarih)
     val turu: DiniGunTuru get() = DiniGunTuru.from(tur)
 
+    /** Etkin dildeki adı. */
+    val adi: String get() = t(ad)
+
     /** "Miraç Kandiliniz mübarek olsun", "Kadir Geceniz mübarek olsun", "Bayramınız mübarek olsun" */
     val tebrik: String
         get() = when {
-            ad.endsWith("Kandili") -> "${ad}niz mübarek olsun"
-            ad.endsWith("Gecesi") -> "${ad.dropLast(3)}niz mübarek olsun"
-            turu == DiniGunTuru.BAYRAM -> "Bayramınız mübarek olsun"
-            else -> "Hayırlı olsun"
+            // Anahtarlar Tebrikler'deki başlıklarla aynıdır ("Miraç Kandiliniz mübarek olsun").
+            ad.endsWith("Kandili") -> t("${ad}niz mübarek olsun")
+            ad.endsWith("Gecesi") -> t("Kadir Geceniz mübarek olsun")
+            turu == DiniGunTuru.BAYRAM -> t("Bayramınız mübarek olsun")
+            else -> t("Hayırlı olsun")
         }
 }
 

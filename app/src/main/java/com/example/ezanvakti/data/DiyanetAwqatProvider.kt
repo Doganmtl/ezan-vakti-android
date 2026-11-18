@@ -1,8 +1,9 @@
 package com.example.ezanvakti.data
 
-import com.example.ezanvakti.AppConfig
+import com.example.ezanvakti.i18n.t
 import com.example.ezanvakti.model.DailyTimes
 import com.example.ezanvakti.model.Place
+import com.example.ezanvakti.model.SelectedLocation
 import com.example.ezanvakti.model.VakitCalculator
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -57,13 +58,19 @@ class DiyanetAwqatProvider(
     private var refreshToken: String? = null
     private var issuedAt = 0L
 
-    override suspend fun states(): List<Place> =
-        get<List<AwqatPlace>>("/api/Place/States/${AppConfig.TURKEY_COUNTRY_ID}").map { Place(it.id, it.name) }
+    // Bu sınıf yalnızca Türkiye için kullanılır (yanıtta yerel saat farkı yok); yurt dışı sıradaki kaynaktan gelir.
+    override suspend fun countries(): List<Place> = throw ProviderException(t("Veri alınamadı."))
+
+    override suspend fun states(countryId: Int): List<Place> {
+        if (countryId != SelectedLocation.TURKIYE_ID) throw ProviderException(t("Veri alınamadı."))
+        return get<List<AwqatPlace>>("/api/Place/States/$countryId").map { Place(it.id, it.name) }
+    }
 
     override suspend fun cities(stateId: Int): List<Place> =
         get<List<AwqatPlace>>("/api/Place/Cities/$stateId").map { Place(it.id, it.name) }
 
-    override suspend fun times(cityId: Int): List<DailyTimes> {
+    override suspend fun times(cityId: Int, countryId: Int): List<DailyTimes> {
+        if (countryId != SelectedLocation.TURKIYE_ID) throw ProviderException(t("Veri alınamadı."))
         val list = get<List<AwqatTime>>("/api/PrayerTime/Monthly/$cityId")
         return list.mapNotNull {
             VakitCalculator.parse(
@@ -71,7 +78,7 @@ class DiyanetAwqatProvider(
                 listOf(it.fajr, it.sunrise, it.dhuhr, it.asr, it.maghrib, it.isha),
                 it.hijriDateLong,
             )
-        }.ifEmpty { throw ProviderException("Vakit bilgisi alınamadı.") }
+        }.ifEmpty { throw ProviderException(t("Vakit bilgisi alınamadı.")) }
     }
 
     private suspend inline fun <reified T> get(path: String): T {
@@ -83,7 +90,7 @@ class DiyanetAwqatProvider(
             Http.request(base + path, bearer = token())
         }
         return Http.json.decodeFromString<AwqatEnvelope<T>>(text).data
-            ?: throw ProviderException("Vakit bilgisi alınamadı.")
+            ?: throw ProviderException(t("Vakit bilgisi alınamadı."))
     }
 
     private suspend fun token(): String = mutex.withLock {
@@ -101,13 +108,13 @@ class DiyanetAwqatProvider(
         try {
             storeToken(Http.request("$base/Auth/Login", method = "POST", body = body))
         } catch (e: HttpException) {
-            throw ProviderException("Diyanet servisine giriş yapılamadı. Hesap bilgilerini kontrol edin.")
+            throw ProviderException(t("Diyanet servisine giriş yapılamadı. Hesap bilgilerini kontrol edin."))
         }
     }
 
     private fun storeToken(responseText: String): String {
         val token = Http.json.decodeFromString<AwqatEnvelope<AwqatToken>>(responseText).data
-            ?: throw ProviderException("Diyanet servisine giriş yapılamadı.")
+            ?: throw ProviderException(t("Diyanet servisine giriş yapılamadı."))
         accessToken = token.accessToken
         refreshToken = token.refreshToken
         issuedAt = System.currentTimeMillis()

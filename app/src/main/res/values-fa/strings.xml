@@ -1,0 +1,5 @@
+<resources>
+    <string name="widget_aciklama">نماز بعدی و زمان باقی‌مانده</string>
+    <string name="widget_kucuk_aciklama">نماز بعدی و شمارش معکوس (کوچک)</string>
+    <string name="widget_serit_aciklama">اوقات امروز در یک ردیف (نوار)</string>
+</resources>

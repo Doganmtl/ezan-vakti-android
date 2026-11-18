@@ -1,5 +1,7 @@
 package com.example.ezanvakti.ui
 
+import com.example.ezanvakti.i18n.t
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -91,14 +93,14 @@ fun ZikirEkrani(vm: ZikirViewModel) {
                 Modifier.fillMaxWidth().background(Kart, RoundedCornerShape(50)).padding(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                ModSecenek("Serbest zikir", d.mod == ZikirModu.SERBEST, Modifier.weight(1f)) { vm.setMod(ZikirModu.SERBEST) }
-                ModSecenek("Namaz tesbihatı", d.mod == ZikirModu.TESBIHAT, Modifier.weight(1f)) { vm.setMod(ZikirModu.TESBIHAT) }
+                ModSecenek(t("Serbest zikir"), d.mod == ZikirModu.SERBEST, Modifier.weight(1f)) { vm.setMod(ZikirModu.SERBEST) }
+                ModSecenek(t("Namaz tesbihatı"), d.mod == ZikirModu.TESBIHAT, Modifier.weight(1f)) { vm.setMod(ZikirModu.TESBIHAT) }
             }
 
             // Zikir adı
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    d.gosterilenAd + if (d.mod == ZikirModu.SERBEST) " ▾" else "",
+                    t(d.gosterilenAd) + if (d.mod == ZikirModu.SERBEST) " ▾" else "",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -110,7 +112,7 @@ fun ZikirEkrani(vm: ZikirViewModel) {
                 if (d.mod == ZikirModu.TESBIHAT) {
                     val adim = Tesbihat.adimlar.getOrNull(d.tesbihatAdim)
                     Text(
-                        adim?.anlam ?: "Allah kabul etsin.",
+                        adim?.anlam?.let { t(it) } ?: t("Allah kabul etsin."),
                         fontSize = 14.sp,
                         color = Color.White.copy(alpha = 0.8f),
                         textAlign = TextAlign.Center,
@@ -127,19 +129,19 @@ fun ZikirEkrani(vm: ZikirViewModel) {
 
             // Kontroller
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                KucukDugme("↶ Geri al", enabled = d.sayac > 0, onClick = vm::geriAl)
-                KucukDugme("⟲ Sıfırla", enabled = d.sayac > 0 || d.tesbihatAdim > 0) { sifirlaSor = true }
+                KucukDugme(t("↶ Geri al"), enabled = d.sayac > 0, onClick = vm::geriAl)
+                KucukDugme(t("⟲ Sıfırla"), enabled = d.sayac > 0 || d.tesbihatAdim > 0) { sifirlaSor = true }
             }
 
             if (d.mod == ZikirModu.SERBEST) {
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Hedef", fontSize = 14.sp, color = Color.White.copy(alpha = 0.75f))
+                    Text(t("Hedef"), fontSize = 14.sp, color = Color.White.copy(alpha = 0.75f))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         hazirHedefler.forEach { h ->
-                            Cip(if (h == 0) "Hedefsiz" else "$h", d.hedef == h, Modifier.weight(1f)) { vm.setHedef(h) }
+                            Cip(if (h == 0) t("Hedefsiz") else "$h", d.hedef == h, Modifier.weight(1f)) { vm.setHedef(h) }
                         }
                         val ozel = d.hedef !in hazirHedefler
-                        Cip(if (ozel) "${d.hedef}" else "Özel", ozel, Modifier.weight(1f)) { hedefSor = true }
+                        Cip(if (ozel) "${d.hedef}" else t("Özel"), ozel, Modifier.weight(1f)) { hedefSor = true }
                     }
                 }
             }
@@ -147,17 +149,17 @@ fun ZikirEkrani(vm: ZikirViewModel) {
             Column(
                 Modifier.fillMaxWidth().background(Kart, RoundedCornerShape(20.dp)).padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
-                AyarSatir("Titreşim", d.titresim, vm::setTitresim)
-                AyarSatir("Ses tuşlarıyla say", d.sesTusu, vm::setSesTusu)
+                AyarSatir(t("Titreşim"), d.titresim, vm::setTitresim)
+                AyarSatir(t("Ses tuşlarıyla say"), d.sesTusu, vm::setSesTusu)
                 Text(
-                    "Toplam zikir: ${"%,d".format(d.toplam).replace(',', '.')}",
+                    t("Toplam zikir: %s", "%,d".format(d.toplam).replace(',', '.')),
                     fontSize = 13.sp,
                     color = Color.White.copy(alpha = 0.7f),
                     modifier = Modifier.padding(vertical = 6.dp),
                 )
             }
             Text(
-                "Sayım her dokunuşta kaydedilir; uygulamayı kapatsanız da kaldığınız yerden devam edersiniz.",
+                t("Sayım her dokunuşta kaydedilir; uygulamayı kapatsanız da kaldığınız yerden devam edersiniz."),
                 fontSize = 12.sp,
                 color = Color.White.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center,
@@ -168,20 +170,20 @@ fun ZikirEkrani(vm: ZikirViewModel) {
     if (sifirlaSor) {
         AlertDialog(
             onDismissRequest = { sifirlaSor = false },
-            title = { Text("Sayaç sıfırlansın mı?") },
+            title = { Text(t("Sayaç sıfırlansın mı?")) },
             text = {
                 Text(
-                    if (d.mod == ZikirModu.TESBIHAT) "Tesbihat baştan başlar."
-                    else "${d.gosterilenAd}: ${d.sayac} sayım silinir. Toplam zikir sayınız değişmez."
+                    if (d.mod == ZikirModu.TESBIHAT) t("Tesbihat baştan başlar.")
+                    else t("%s: %s sayım silinir. Toplam zikir sayınız değişmez.", t(d.gosterilenAd), d.sayac)
                 )
             },
-            confirmButton = { TextButton(onClick = { vm.sifirla(); sifirlaSor = false }) { Text("Sıfırla") } },
-            dismissButton = { TextButton(onClick = { sifirlaSor = false }) { Text("Vazgeç") } },
+            confirmButton = { TextButton(onClick = { vm.sifirla(); sifirlaSor = false }) { Text(t("Sıfırla")) } },
+            dismissButton = { TextButton(onClick = { sifirlaSor = false }) { Text(t("Vazgeç")) } },
         )
     }
     if (hedefSor) {
         SayiDialog(
-            baslik = "Özel hedef",
+            baslik = t("Özel hedef"),
             ilk = if (d.hedef > 0) d.hedef else 33,
             onTamam = { vm.setHedef(it); hedefSor = false },
             onKapat = { hedefSor = false },
@@ -208,7 +210,7 @@ private fun SayacHalkasi(d: ZikirDurumu, onSay: () -> Unit) {
             .clip(CircleShape)
             .background(Color.White.copy(alpha = 0.10f))
             .clickable(enabled = !d.tesbihatBitti, onClick = onSay)
-            .semantics { contentDescription = "Zikir saymak için dokunun. ${d.gosterilenAd}, ${d.sayac}" },
+            .semantics { contentDescription = t("Zikir saymak için dokunun. %s, %s", t(d.gosterilenAd), d.sayac) },
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.fillMaxSize().padding(10.dp)) {
@@ -223,17 +225,17 @@ private fun SayacHalkasi(d: ZikirDurumu, onSay: () -> Unit) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clearAndSetSemantics { }) {
             if (d.tesbihatBitti) {
                 Text("✓", fontSize = 72.sp, fontWeight = FontWeight.Bold, color = renk)
-                Text("Tesbihat tamamlandı", fontSize = 16.sp)
+                Text(t("Tesbihat tamamlandı"), fontSize = 16.sp)
             } else {
                 Text("${d.sayac}", fontSize = 76.sp, fontWeight = FontWeight.Bold)
                 val alt = when {
-                    d.mod == ZikirModu.TESBIHAT -> "/ ${d.gecerliHedef}"
-                    d.hedef > 0 && d.tur > 1 -> "/ ${d.hedef} · ${d.tur}. tur"
-                    d.hedef > 0 -> "/ ${d.hedef}"
+                    d.mod == ZikirModu.TESBIHAT -> t("/ %s", d.gecerliHedef)
+                    d.hedef > 0 && d.tur > 1 -> t("/ %s · %s. tur", d.hedef, d.tur)
+                    d.hedef > 0 -> t("/ %s", d.hedef)
                     else -> "hedefsiz"
                 }
                 Text(alt, fontSize = 16.sp, color = Color.White.copy(alpha = 0.75f))
-                Text("Dokunun", fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f), modifier = Modifier.padding(top = 8.dp))
+                Text(t("Dokunun"), fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f), modifier = Modifier.padding(top = 8.dp))
             }
         }
     }
@@ -260,7 +262,7 @@ private fun TesbihatAdimlari(adim: Int) {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(if (bitti) "✓ 33" else "33", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Text(a.ad, fontSize = 12.sp, textAlign = TextAlign.Center)
+                Text(t(a.ad), fontSize = 12.sp, textAlign = TextAlign.Center)
             }
         }
     }
@@ -343,9 +345,9 @@ fun SayiDialog(baslik: String, ilk: Int, aciklama: String? = null, onTamam: (Int
             }
         },
         confirmButton = {
-            TextButton(onClick = { sayi?.let(onTamam) }, enabled = sayi != null) { Text("Tamam") }
+            TextButton(onClick = { sayi?.let(onTamam) }, enabled = sayi != null) { Text(t("Tamam")) }
         },
-        dismissButton = { TextButton(onClick = onKapat) { Text("Vazgeç") } },
+        dismissButton = { TextButton(onClick = onKapat) { Text(t("Vazgeç")) } },
     )
 }
 
@@ -354,13 +356,13 @@ private fun ZikirAdiDialog(mevcut: String, sayac: Int, onSec: (String) -> Unit, 
     var ozel by rememberSaveable { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onKapat,
-        title = { Text("Zikir seçin") },
+        title = { Text(t("Zikir seçin")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (sayac > 0) Text("Yeni zikir sıfırdan başlar ($mevcut: $sayac sayım silinir).", fontSize = 13.sp)
+                if (sayac > 0) Text(t("Yeni zikir sıfırdan başlar (%s: %s sayım silinir).", t(mevcut), sayac), fontSize = 13.sp)
                 hazirZikirler.forEach { z ->
                     Text(
-                        (if (z == mevcut) "● " else "") + z,
+                        (if (z == mevcut) "● " else "") + t(z),
                         fontSize = 17.sp,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -373,13 +375,13 @@ private fun ZikirAdiDialog(mevcut: String, sayac: Int, onSec: (String) -> Unit, 
                     value = ozel,
                     onValueChange = { ozel = it.take(40) },
                     singleLine = true,
-                    label = { Text("Başka bir zikir yazın") },
+                    label = { Text(t("Başka bir zikir yazın")) },
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSec(ozel.trim()) }, enabled = ozel.isNotBlank()) { Text("Başla") }
+            TextButton(onClick = { onSec(ozel.trim()) }, enabled = ozel.isNotBlank()) { Text(t("Başla")) }
         },
-        dismissButton = { TextButton(onClick = onKapat) { Text("Vazgeç") } },
+        dismissButton = { TextButton(onClick = onKapat) { Text(t("Vazgeç")) } },
     )
 }

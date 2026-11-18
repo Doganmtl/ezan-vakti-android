@@ -1,5 +1,7 @@
 package com.example.ezanvakti.ui
 
+import com.example.ezanvakti.i18n.t
+
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import androidx.activity.compose.BackHandler
@@ -56,15 +58,19 @@ private fun DigerMenu(onSayfa: (DigerSayfa) -> Unit, onAyarlar: () -> Unit) {
             Modifier.widthIn(max = 640.dp).fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text("Diğer", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
-            MenuSatiri("📝", "Kaza takibi", "Kaza namazı ve orucu sayacı") { onSayfa(DigerSayfa.KAZA) }
+            Text(t("Diğer"), fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
+            MenuSatiri("📝", t("Kaza takibi"), t("Kaza namazı ve orucu sayacı")) { onSayfa(DigerSayfa.KAZA) }
             if (widgetEklenebilir) {
-                MenuSatiri("🧩", "Ana ekrana widget ekle", "Sıradaki vakit ve kalan süre ana ekranda") {
+                val ekle = { sinif: Class<*> ->
                     context.getSystemService(AppWidgetManager::class.java)
-                        ?.requestPinAppWidget(ComponentName(context, VakitWidget::class.java), null, null)
+                        ?.requestPinAppWidget(ComponentName(context, sinif), null, null)
+                    Unit
                 }
+                MenuSatiri("🧩", t("Ana ekrana widget ekle"), t("Sıradaki vakit ve kalan süre ana ekranda")) { ekle(VakitWidget::class.java) }
+                MenuSatiri("🔹", t("Küçük widget ekle"), t("Yalnızca sıradaki vakit ve geri sayım")) { ekle(com.example.ezanvakti.widget.KucukWidget::class.java) }
+                MenuSatiri("➖", t("Şerit widget ekle"), t("Günün vakitleri yan yana, tek satırda")) { ekle(com.example.ezanvakti.widget.SeritWidget::class.java) }
             }
-            MenuSatiri("⚙", "Ayarlar", "Bildirimler, Cuma hatırlatması, konum", onAyarlar)
+            MenuSatiri("⚙", t("Ayarlar"), t("Bildirimler, Cuma hatırlatması, konum"), onAyarlar)
         }
     }
 }

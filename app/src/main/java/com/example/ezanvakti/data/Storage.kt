@@ -2,7 +2,9 @@ package com.example.ezanvakti.data
 
 import android.content.Context
 import com.example.ezanvakti.model.DailyTimes
+import com.example.ezanvakti.model.HicriTakvim
 import com.example.ezanvakti.model.SelectedLocation
+import com.example.ezanvakti.model.VakitCalculator
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import java.io.File
@@ -81,13 +83,57 @@ class Storage(context: Context) {
         }.orEmpty()
         set(value) = prefs.edit().putString("kayitli_konumlar", Http.json.encodeToString(value)).apply()
 
+    /** Ana ekran arka planı (bkz. ArkaPlan): "vakit", "gece", "zumrut"… */
+    var arkaPlan: String
+        get() = prefs.getString("arka_plan", "vakit") ?: "vakit"
+        set(value) = prefs.edit().putString("arka_plan", value).apply()
+
+    /** Vakitlerin dizilişi: "liste", "ikili", "uclu". */
+    var vakitDuzeni: String
+        get() = prefs.getString("vakit_duzeni", "liste") ?: "liste"
+        set(value) = prefs.edit().putString("vakit_duzeni", value).apply()
+
+    /** Widget arka planı: "koyu", "seffaf", "tema". */
+    var widgetStili: String
+        get() = prefs.getString("widget_stili", "koyu") ?: "koyu"
+        set(value) = prefs.edit().putString("widget_stili", value).apply()
+
+    /** Kilit ekranı sayacının içeriği: "siradaki", "tum" (sıradaki + günün vakitleri), "ramazan" (yalnızca Ramazan'da). */
+    var canliSayacModu: String
+        get() = prefs.getString("canli_sayac_modu", "siradaki") ?: "siradaki"
+        set(value) = prefs.edit().putString("canli_sayac_modu", value).apply()
+
+    /** Hicri takvim seçimi: "" = ülkeye göre otomatik, "diyanet", "ummulkura". */
+    var hicriTakvim: String
+        get() = prefs.getString("hicri_takvim", "") ?: ""
+        set(value) = prefs.edit().putString("hicri_takvim", value).apply()
+
+    /** Hilal gözlemine göre ilan edilen tarih farklıysa gün kaydırma (−2…+2). */
+    var hicriDuzeltme: Int
+        get() = prefs.getInt("hicri_duzeltme", 0)
+        set(value) = prefs.edit().putInt("hicri_duzeltme", value.coerceIn(-2, 2)).apply()
+
+    /** Seçili konuma göre etkin hicri takvim ayarı. */
+    fun takvimAyari(location: SelectedLocation? = this.location): HicriTakvim.Ayar =
+        HicriTakvim.ayar(hicriTakvim, location?.ulkeId, hicriDuzeltme)
+
     private fun timesFile(cityId: Int) = File(cacheDir, "vakitler-$cityId.json")
 
+    /**
+     * Kayıtlı vakitler; hicri tarihler seçili takvime göre uyarlanmış olarak döner ve
+     * konumun saat dilimi ayarlanır. Dosyada Diyanet'in ham verisi durur.
+     */
     fun cachedTimes(cityId: Int): List<DailyTimes>? = runCatching {
         Http.json.decodeFromString<List<DailyTimes>>(timesFile(cityId).readText())
-    }.getOrNull()
+    }.getOrNull()?.let { hazirla(it) }
 
     fun saveTimes(days: List<DailyTimes>, cityId: Int) {
         runCatching { timesFile(cityId).writeText(Http.json.encodeToString(days)) }
+    }
+
+    /** Ham Diyanet verisini kullanıma hazırlar: saat dilimi + seçili hicri takvim. */
+    fun hazirla(days: List<DailyTimes>): List<DailyTimes> {
+        VakitCalculator.bolgeyiAyarla(days)
+        return HicriTakvim.gunleriUyarla(days, takvimAyari())
     }
 }

@@ -1,5 +1,7 @@
 package com.example.ezanvakti.model
 
+import com.example.ezanvakti.i18n.t
+
 import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -37,7 +39,7 @@ object Kible {
 
     /** "Güneydoğu" gibi yön adı. */
     fun yonAdi(aci: Double): String {
-        val adlar = listOf("Kuzey", "Kuzeydoğu", "Doğu", "Güneydoğu", "Güney", "Güneybatı", "Batı", "Kuzeybatı")
+        val adlar = listOf(t("Kuzey"), t("Kuzeydoğu"), t("Doğu"), t("Güneydoğu"), t("Güney"), t("Güneybatı"), t("Batı"), t("Kuzeybatı"))
         return adlar[(((aci + 22.5) % 360) / 45).toInt()]
     }
 }

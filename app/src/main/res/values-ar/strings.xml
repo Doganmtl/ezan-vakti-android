@@ -1,0 +1,5 @@
+<resources>
+    <string name="widget_aciklama">الصلاة التالية والوقت المتبقي</string>
+    <string name="widget_kucuk_aciklama">الصلاة التالية والعدّ التنازلي (صغير)</string>
+    <string name="widget_serit_aciklama">مواقيت اليوم جنبًا إلى جنب (شريط)</string>
+</resources>

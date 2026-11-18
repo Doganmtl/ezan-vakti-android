@@ -1,5 +1,7 @@
 package com.example.ezanvakti.ui
 
+import com.example.ezanvakti.i18n.t
+
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -37,7 +39,21 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import com.example.ezanvakti.AppConfig
 import com.example.ezanvakti.BuildConfig
+import androidx.compose.runtime.mutableStateOf
+import com.example.ezanvakti.i18n.Dil
+import com.example.ezanvakti.model.HicriTakvim
+import com.example.ezanvakti.ui.theme.ArkaPlan
+import com.example.ezanvakti.ui.theme.VakitDuzeni
+import com.example.ezanvakti.ui.theme.arkaPlanRenkleri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import com.example.ezanvakti.notify.NotificationScheduler
 import com.example.ezanvakti.notify.SessizReceiver
 import java.text.DateFormat
@@ -60,6 +76,16 @@ fun SettingsSheet(vm: PrayerViewModel, state: UiState, onDismiss: () -> Unit) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     }
 
+    var geriBildirim by remember { mutableStateOf(false) }
+    var geriBildirimSonuc by remember { mutableStateOf<String?>(null) }
+    if (geriBildirim) {
+        GeriBildirimDialog(
+            konum = state.location,
+            onKapat = { geriBildirim = false },
+            onSonuc = { geriBildirimSonuc = it; geriBildirim = false },
+        )
+    }
+
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier
@@ -70,89 +96,232 @@ fun SettingsSheet(vm: PrayerViewModel, state: UiState, onDismiss: () -> Unit) {
                 .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text("Ayarlar", fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+            Text(t("Ayarlar"), fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+
+            // Dil: seçilince ekran yeni dille yeniden açılır.
+            Text(t("Dil"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Dil.secenekler.forEach { secenek ->
+                    FilterChip(
+                        selected = state.dil == secenek.kod,
+                        onClick = {
+                            if (state.dil != secenek.kod) {
+                                vm.setDil(secenek.kod)
+                                context.etkinlik()?.recreate()
+                            }
+                        },
+                        label = { Text(if (secenek.kod.isEmpty()) t(secenek.ad) else secenek.ad) },
+                    )
+                }
+            }
+            Footnote(t("Çeviriler gönüllü kontrolden geçene kadar taslaktır; yer adları Diyanet'in yazımıyla gösterilir."))
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
+            // Görünüm: arka plan ve vakitlerin dizilişi
+            Text(t("Görünüm"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(t("Arka plan"), fontSize = 17.sp, modifier = Modifier.padding(top = 4.dp))
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ArkaPlan.entries.forEach { tema ->
+                    val (ust, alt) = arkaPlanRenkleri(tema, com.example.ezanvakti.model.Vakit.OGLE)
+                    FilterChip(
+                        selected = state.arkaPlan == tema.kod,
+                        onClick = { vm.setArkaPlan(tema.kod) },
+                        leadingIcon = {
+                            Box(
+                                Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (tema == ArkaPlan.VAKTE_GORE) {
+                                            Brush.sweepGradient(listOf(Color(0xFF1A1F54), Color(0xFFF28C59), Color(0xFF2980D9), Color(0xFFE65940), Color(0xFF1A1F54)))
+                                        } else Brush.verticalGradient(listOf(ust, alt))
+                                    ),
+                            )
+                        },
+                        label = { Text(t(tema.ad)) },
+                    )
+                }
+            }
+            Text(t("Vakitlerin dizilişi"), fontSize = 17.sp, modifier = Modifier.padding(top = 10.dp))
+            SecimSatiri(
+                VakitDuzeni.entries.map { it.kod to t(it.ad) },
+                state.vakitDuzeni,
+                vm::setVakitDuzeni,
+            )
+            Footnote(t("Alt alta liste ya da yan yana ikili/üçlü kutucuklar."))
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
             if (BuildConfig.DEBUG) {
                 // Yalnızca test sürümünde: Ramazan arayüzünü yılın herhangi bir gününde denemek için
-                AyarSatiri("Ramazan önizlemesi (geliştirici)", state.ramazanOnizleme, true, vm::setRamazanOnizleme)
-                Footnote("Bugünü Ramazan'ın 5. günüymüş gibi gösterir. Yayın sürümünde görünmez.")
+                AyarSatiri(t("Ramazan önizlemesi (geliştirici)"), state.ramazanOnizleme, true, vm::setRamazanOnizleme)
+                Footnote(t("Bugünü Ramazan'ın 5. günüymüş gibi gösterir. Yayın sürümünde görünmez."))
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
             }
 
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Vakit bildirimleri", fontSize = 17.sp, modifier = Modifier.weight(1f))
+                Text(t("Vakit bildirimleri"), fontSize = 17.sp, modifier = Modifier.weight(1f))
                 Switch(checked = state.notificationsEnabled, onCheckedChange = vm::setNotificationsEnabled)
             }
-            Footnote("İmsak, öğle, ikindi, akşam ve yatsı vakti girdiğinde bildirim gönderilir. Ramazan'da imsak ve iftar bildirimleri buna göre değişir.")
+            Footnote(t("İmsak, öğle, ikindi, akşam ve yatsı vakti girdiğinde bildirim gönderilir. Ramazan'da imsak ve iftar bildirimleri buna göre değişir."))
 
-            AyarSatiri("Kandil gecesi bildirimi", state.kandilBildirimi, state.notificationsEnabled, vm::setKandilBildirimi)
-            Footnote("Kandil akşamı, akşam ezanıyla birlikte \"Bu gece … Kandili\" bildirimi.")
+            AyarSatiri(t("Kandil gecesi bildirimi"), state.kandilBildirimi, state.notificationsEnabled, vm::setKandilBildirimi)
+            Footnote(t("Kandil akşamı, akşam ezanıyla birlikte \"Bu gece … Kandili\" bildirimi."))
 
-            AyarSatiri("Sahur hatırlatıcısı", state.sahurHatirlatici, state.notificationsEnabled, vm::setSahurHatirlatici)
-            Footnote("Ramazan'da imsaktan 45 dakika önce hatırlatır.")
+            AyarSatiri(t("Sahur hatırlatıcısı"), state.sahurHatirlatici, state.notificationsEnabled, vm::setSahurHatirlatici)
+            Footnote(t("Ramazan'da imsaktan 45 dakika önce hatırlatır."))
 
-            AyarSatiri("Cuma hatırlatması", state.cumaHatirlatici, state.notificationsEnabled, vm::setCumaHatirlatici)
-            Footnote("Cuma günü, vakit girmeden 45 dakika önce hatırlatır.")
+            AyarSatiri(t("Cuma hatırlatması"), state.cumaHatirlatici, state.notificationsEnabled, vm::setCumaHatirlatici)
+            Footnote(t("Cuma günü, vakit girmeden 45 dakika önce hatırlatır."))
 
-            AyarSatiri("Kehf suresi hatırlatması", state.kehfHatirlatici, state.notificationsEnabled, vm::setKehfHatirlatici)
-            Footnote("Cuma sabahı Kehf suresini okumayı hatırlatır.")
+            AyarSatiri(t("Kehf suresi hatırlatması"), state.kehfHatirlatici, state.notificationsEnabled, vm::setKehfHatirlatici)
+            Footnote(t("Cuma sabahı Kehf suresini okumayı hatırlatır."))
 
-            AyarSatiri("Bayram ve kandil tebrikleri", state.tebrikler, state.notificationsEnabled, vm::setTebrikler)
-            Footnote("Resmî bayram ve tatillerde, Ramazan ve Kurban Bayramı'nın ilk günü ve kandillerde sabah 09:00'da tebrik mesajı gönderir.")
+            AyarSatiri(t("Bayram ve kandil tebrikleri"), state.tebrikler, state.notificationsEnabled, vm::setTebrikler)
+            Footnote(t("Resmî bayram ve tatillerde, Ramazan ve Kurban Bayramı'nın ilk günü ve kandillerde sabah 09:00'da tebrik mesajı gönderir."))
 
-            Text("Vakitten önce hatırlat", fontSize = 17.sp, modifier = Modifier.padding(top = 10.dp))
+            Text(t("Vakitten önce hatırlat"), fontSize = 17.sp, modifier = Modifier.padding(top = 10.dp))
             SecenekSatiri(listOf(0, 10, 15, 30, 45), state.onceDk, state.notificationsEnabled, vm::setOnceDk)
-            Footnote("Her vakit girmeden seçtiğiniz kadar önce haber verir; güneş doğuşu için \"sabah namazı için son dakikalar\" hatırlatması gelir.")
+            Footnote(t("Her vakit girmeden seçtiğiniz kadar önce haber verir; güneş doğuşu için \"sabah namazı için son dakikalar\" hatırlatması gelir."))
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text("Namazda telefonu sessize al", fontSize = 17.sp)
+            Text(t("Namazda telefonu sessize al"), fontSize = 17.sp)
             SecenekSatiri(listOf(0, 20, 30, 45), state.sessizDk, true) { dk ->
                 vm.setSessizDk(dk)
                 if (dk > 0 && !sessizIzni) context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
             }
-            Footnote("Vakit girince telefon \"Rahatsız Etmeyin\" moduna geçer, süre dolunca eski hâline döner. Telefon zaten sessizdeyse dokunulmaz. Güneş doğuşunda sessize alınmaz.")
+            Footnote(t("Vakit girince telefon \"Rahatsız Etmeyin\" moduna geçer, süre dolunca eski hâline döner. Telefon zaten sessizdeyse dokunulmaz. Güneş doğuşunda sessize alınmaz."))
             if (state.sessizDk > 0 && !sessizIzni) {
-                Footnote("Bunun için \"Rahatsız Etmeyin\" erişimi gerekiyor: açılan listede Ezan Vakti'ye izin verin.")
+                Footnote(t("Bunun için \"Rahatsız Etmeyin\" erişimi gerekiyor: açılan listede Ezan Vakti'ye izin verin."))
                 TextButton(onClick = {
                     context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
-                }) { Text("Rahatsız Etmeyin erişimi ver") }
+                }) { Text(t("Rahatsız Etmeyin erişimi ver")) }
             }
 
-            AyarSatiri("Kilit ekranında geri sayım", state.canliSayac, true, vm::setCanliSayac)
-            Footnote("Bildirim alanında ve kilit ekranında sıradaki vakte (Ramazan'da iftar ya da sahura) kalan süre sessizce görünür.")
+            AyarSatiri(t("Kilit ekranında geri sayım"), state.canliSayac, true, vm::setCanliSayac)
+            Footnote(t("Bildirim alanında ve kilit ekranında sıradaki vakte (Ramazan'da iftar ya da sahura) kalan süre sessizce görünür."))
+            if (state.canliSayac) {
+                SecimSatiri(
+                    listOf(
+                        "siradaki" to t("Yalnızca sıradaki vakit"),
+                        "tum" to t("Sıradaki vakit + günün vakitleri"),
+                        "ramazan" to t("Yalnızca Ramazan'da"),
+                    ),
+                    state.canliSayacModu,
+                    vm::setCanliSayacModu,
+                )
+            }
+
+            Text(t("Widget görünümü"), fontSize = 17.sp, modifier = Modifier.padding(top = 10.dp))
+            SecimSatiri(
+                listOf("koyu" to t("Koyu"), "seffaf" to t("Şeffaf"), "tema" to t("Uygulama temasıyla")),
+                state.widgetStili,
+                vm::setWidgetStili,
+            )
+            Footnote(t("Üç widget var: büyük (geri sayım ve günün vakitleri), küçük (yalnızca sıradaki vakit) ve şerit (günün vakitleri yan yana). Ana ekranda boş bir yere basılı tutup Widget'lar'dan ekleyebilirsiniz."))
 
             if (state.notificationsEnabled && !notifAllowed) {
-                Footnote("Bildirim izni kapalı. Bildirim alabilmek için izin verin.")
+                Footnote(t("Bildirim izni kapalı. Bildirim alabilmek için izin verin."))
                 TextButton(onClick = {
                     context.startActivity(
                         Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                     )
-                }) { Text("Bildirim iznini aç") }
+                }) { Text(t("Bildirim iznini aç")) }
             }
             if (state.notificationsEnabled && !canExact && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                Footnote("Bildirimlerin tam vakit girdiği dakikada gelmesi için \"Alarm ve hatırlatıcı\" iznini açın.")
+                Footnote(t("Bildirimlerin tam vakit girdiği dakikada gelmesi için \"Alarm ve hatırlatıcı\" iznini açın."))
                 TextButton(onClick = {
                     context.startActivity(
                         Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
                     )
-                }) { Text("Tam zamanlı bildirime izin ver") }
+                }) { Text(t("Tam zamanlı bildirime izin ver")) }
             }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text("Konum", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(t("Konum"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(state.location?.title ?: "—", fontSize = 17.sp)
-            TextButton(onClick = { vm.useCurrentLocation(); onDismiss() }) { Text("Konumumu yeniden bul") }
-            AyarSatiri("Seyahat modu", state.seyahatModu, true, vm::setSeyahatModu)
-            Footnote("Başka bir ile gittiğinizde uygulama açılınca vakitlerin yeni konuma göre güncellenmesini önerir.")
+            TextButton(onClick = { vm.useCurrentLocation(); onDismiss() }) { Text(t("Konumumu yeniden bul")) }
+            AyarSatiri(t("Seyahat modu"), state.seyahatModu, true, vm::setSeyahatModu)
+            Footnote(t("Başka bir ile gittiğinizde uygulama açılınca vakitlerin yeni konuma göre güncellenmesini önerir."))
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text("Veri", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            state.lastUpdated?.let {
-                Text("Son güncelleme: " + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(it)))
+            Text(t("Hicri takvim"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf(
+                    "" to t("Ülkeye göre"),
+                    HicriTakvim.Tur.DIYANET.kod to t("Diyanet"),
+                    HicriTakvim.Tur.UMMULKURA.kod to t("Ümmülkurâ (Suudi Arabistan)"),
+                ).forEach { (kod, ad) ->
+                    FilterChip(selected = state.hicriTakvim == kod, onClick = { vm.setHicriTakvim(kod) }, label = { Text(ad) })
+                }
             }
-            TextButton(onClick = { vm.reload() }) { Text("Vakitleri şimdi yenile") }
-            Footnote("Namaz vakitleri T.C. Diyanet İşleri Başkanlığı verileridir.")
+            Footnote(
+                t("Kullanılan: %s.", if (state.takvimTuru == HicriTakvim.Tur.UMMULKURA) t("Ümmülkurâ (Suudi Arabistan)") else t("Diyanet")) + " " +
+                    t("Kandil, bayram ve Ramazan tarihleri ile imsakiye bu takvime göre hesaplanır. Suudi Arabistan ve Körfez ülkelerinde Ümmülkurâ, diğer ülkelerde Diyanet takvimi varsayılandır.")
+            )
+            Text(t("Gün düzeltmesi"), fontSize = 17.sp, modifier = Modifier.padding(top = 10.dp))
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                (-2..2).forEach { g ->
+                    FilterChip(
+                        selected = state.hicriDuzeltme == g,
+                        onClick = { vm.setHicriDuzeltme(g) },
+                        label = { Text(if (g == 0) t("Yok") else t("%s gün", if (g > 0) "+$g" else "−${-g}")) },
+                    )
+                }
+            }
+            Footnote(t("Bulunduğunuz ülkede Ramazan ve bayram, hilalin görülmesine göre farklı bir günde ilan edildiyse tarihleri buradan bir-iki gün kaydırabilirsiniz."))
+
+            if (AppConfig.GERI_BILDIRIM_EPOSTA.isNotBlank()) {
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                Text(t("Geri bildirim"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = { geriBildirim = true }) { Text(t("✉  Geri bildirim gönder")) }
+                Footnote(t("Öneri ve hataları en fazla 100 karakterle geliştiriciye iletin."))
+                geriBildirimSonuc?.let { Footnote(it) }
+            }
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            Text(t("Veri"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            state.lastUpdated?.let {
+                Text(t("Son güncelleme: ") + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(it)))
+            }
+            TextButton(onClick = { vm.reload() }) { Text(t("Vakitleri şimdi yenile")) }
+            Footnote(t("Namaz vakitleri T.C. Diyanet İşleri Başkanlığı'nın namazvakitleri.diyanet.gov.tr adresinde yayımladığı vakitlerdir; uygulama bunları kendi veri deposundan ya da Diyanet verisinin aynasından alır."))
+        }
+    }
+}
+
+/** Compose bağlamından Activity'yi bulur (dil değişince yeniden oluşturmak için). */
+private fun android.content.Context.etkinlik(): android.app.Activity? {
+    var c: android.content.Context? = this
+    while (c is android.content.ContextWrapper) {
+        if (c is android.app.Activity) return c
+        c = c.baseContext
+    }
+    return null
+}
+
+/** Metinli seçenekler (FilterChip satırı). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SecimSatiri(secenekler: List<Pair<String, String>>, secili: String, onSec: (String) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        secenekler.forEach { (kod, ad) ->
+            FilterChip(selected = secili == kod, onClick = { onSec(kod) }, label = { Text(ad) })
         }
     }
 }
@@ -175,7 +344,7 @@ private fun SecenekSatiri(secenekler: List<Int>, secili: Int, etkin: Boolean, on
                 selected = secili == dk,
                 onClick = { onSec(dk) },
                 enabled = etkin,
-                label = { Text(if (dk == 0) "Kapalı" else "$dk dk") },
+                label = { Text(if (dk == 0) t("Kapalı") else t("%s dk", dk)) },
             )
         }
     }

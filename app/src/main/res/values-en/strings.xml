@@ -1,0 +1,5 @@
+<resources>
+    <string name="widget_aciklama">Next prayer and time left</string>
+    <string name="widget_kucuk_aciklama">Next prayer and countdown (small)</string>
+    <string name="widget_serit_aciklama">Today\'s times side by side (strip)</string>
+</resources>

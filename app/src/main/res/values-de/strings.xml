@@ -1,0 +1,5 @@
+<resources>
+    <string name="widget_aciklama">Nächstes Gebet und Restzeit</string>
+    <string name="widget_kucuk_aciklama">Nächstes Gebet und Countdown (klein)</string>
+    <string name="widget_serit_aciklama">Heutige Zeiten nebeneinander (Leiste)</string>
+</resources>
