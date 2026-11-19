@@ -7,14 +7,15 @@ plugins {
 
 android {
     namespace = "com.example.ezanvakti"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.ezanvakti"   // Play Store'a çıkmadan önce kendi paket adınızla değiştirin
+        applicationId = "io.github.doganmtl.ezanvakti"   // Play Store paket adı — ilk yüklemeden sonra DEĞİŞTİRİLEMEZ
+        // (namespace/Kotlin paketleri com.example.ezanvakti olarak kalabilir; Play yalnızca applicationId'ye bakar)
         minSdk = 26          // Android 8.0+ (cihazların ~%97'si)
-        targetSdk = 35
-        versionCode = 9
-        versionName = "0.6.2"
+        targetSdk = 36   // Google Play: yeni uygulamalar ve güncellemeler 31.08.2026'dan beri API 36 hedeflemeli
+        versionCode = 10   // her Play yüklemesinde bir artırılmalı
+        versionName = "0.7.0"
     }
 
     buildTypes {

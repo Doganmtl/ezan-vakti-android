@@ -2,7 +2,7 @@
 
 Diyanet verisiyle çalışan namaz vakti uygulaması. Türkiye'de il ve ilçe, yurt dışında Diyanet'in vakit yayımladığı yaklaşık 200 ülkede eyalet ve şehir bazında vakitleri gösterir. Ekranda o anki vakit ve bir sonraki vakte kalan süre canlı olarak görünür. Uygulama 12 dilde kullanılabilir ve **Kotlin** ile **Jetpack Compose** ile yazıldı.
 
-> Durum: deneme sürümü (v0.6.2). Henüz Play Store'da yayında değil.
+> Durum: deneme sürümü (v0.7.0). Henüz Play Store'da yayında değil.
 
 <p align="center">
   <img src="docs/ekranlar/vakitler.png" width="200" alt="Vakitler ekranı: Yatsı vakti, imsaka kalan süre ve günün vakitleri" />

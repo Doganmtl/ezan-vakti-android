@@ -1,4 +1,4 @@
-# Ezan Vakti (Android) — v0.6.2
+# Ezan Vakti (Android) — v0.7.0
 
 Kullanıcının konumuna göre Diyanet ezan vakitlerini gösteren Android uygulaması: Türkiye'de il/ilçe,
 yurt dışında Diyanet'in vakit yayımladığı ~200 ülkede eyalet/şehir. 12 dil.
@@ -28,6 +28,13 @@ Telefonda *Ayarlar → Telefon hakkında → Yapı numarası*na 7 kez dokunun �
 - Telefonda dikey düzen, tablette/yatayda (600dp+) iki sütun. Vakte göre değişen arka plan, TalkBack etiketleri.
 
 ## Sürüm notları
+**0.7.0** (Google Play hazırlığı)
+- Paket adı `io.github.doganmtl.ezanvakti` (Play `com.example` ile başlayanları kabul etmez; ilk yüklemeden sonra değişmez).
+  Kod içindeki Kotlin paketleri `com.example.ezanvakti` olarak kaldı; Play yalnızca applicationId'ye bakar.
+  Not: paket adı değiştiği için telefonda/emülatörde eski "com.example" sürümünün yanına ayrı bir uygulama olarak kurulur.
+- `compileSdk` ve `targetSdk` 36 (Android 16): Play 31 Ağustos 2026'dan beri yeni uygulama ve güncellemelerde bunu istiyor.
+- versionCode 10, versionName 0.7.0. Geliştirici ayarları (Ramazan önizlemesi) yalnızca debug derlemesinde görünür; release'de gizli.
+
 **0.6.2** (hata düzeltmeleri)
 - **Uygulama uzun süre açılmasa da vakitler bitmez**: kayıtlı vakitlerin bitmesine 10 gün kalınca arka planda yenileri indirilir
   (en çok 12 saatte bir, 8 sn zaman aşımıyla). Önceden uygulama ~30 gün açılmazsa bildirimler ve widget dururdu.
