@@ -13,8 +13,8 @@ android {
         applicationId = "com.example.ezanvakti"   // Play Store'a çıkmadan önce kendi paket adınızla değiştirin
         minSdk = 26          // Android 8.0+ (cihazların ~%97'si)
         targetSdk = 35
-        versionCode = 8
-        versionName = "0.6.1"
+        versionCode = 9
+        versionName = "0.6.2"
     }
 
     buildTypes {

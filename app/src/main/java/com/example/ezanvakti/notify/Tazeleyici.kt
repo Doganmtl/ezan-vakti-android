@@ -5,11 +5,16 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.example.ezanvakti.AppConfig
 import com.example.ezanvakti.data.DiniGunlerRepository
 import com.example.ezanvakti.data.Storage
 import com.example.ezanvakti.model.GeriSayimHesabi
 import com.example.ezanvakti.model.VakitCalculator
 import com.example.ezanvakti.widget.VakitWidget
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 /**
  * Her vakit değişiminde çalışır: widget'ı ve kilit ekranı sayacını yeniler, bildirim/sessize alma
@@ -19,6 +24,28 @@ import com.example.ezanvakti.widget.VakitWidget
 object Tazeleyici {
     private const val ACTION = "com.example.ezanvakti.TAZELE"
     private const val PLAN_UFKU_MS = 2 * 24 * 3_600_000L
+    /** Kayıtlı vakitlerin bitmesine bu kadar gün kalınca arka planda yenileri indirilir. */
+    private const val YENILEME_GUN = 10
+    private const val YENILEME_ARALIGI_MS = 12 * 3_600_000L
+
+    /**
+     * Uygulama uzun süre açılmazsa kayıtlı vakitler (~30 gün) biter ve bildirimler/widget durur.
+     * Bunu önlemek için vakitler bitmeye yaklaşınca arka planda yenileri indirilir (en çok 12 saatte bir dener).
+     * Yeni veri kaydedildiyse true döner.
+     */
+    suspend fun veriyiYenile(context: Context): Boolean {
+        val storage = Storage(context)
+        val location = storage.location ?: return false
+        val now = System.currentTimeMillis()
+        if (now - storage.arkaPlanYenileme < YENILEME_ARALIGI_MS) return false
+        val sonGun = storage.cachedTimes(location.city.id)?.maxOfOrNull { it.epochDay }
+        if (sonGun != null && sonGun >= VakitCalculator.epochDay(now) + YENILEME_GUN) return false
+        storage.arkaPlanYenileme = now
+        val ham = AppConfig.makeProvider().times(location.city.id, location.ulkeId).sortedBy { it.epochDay }
+        if (ham.isEmpty()) return false
+        storage.saveTimes(ham, location.city.id)
+        return true
+    }
 
     private fun intent(context: Context, flags: Int): PendingIntent? = PendingIntent.getBroadcast(
         context, 950,
@@ -79,6 +106,16 @@ object Tazeleyici {
 
 class TazeleReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        Tazeleyici.calistir(context)
+        val sonuc = goAsync()
+        val app = context.applicationContext
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // İnternet yoksa ya da kaynak yavaşsa kayıtlı vakitlerle devam edilir.
+                val yenilendi = runCatching { withTimeout(8_000) { Tazeleyici.veriyiYenile(app) } }.getOrDefault(false)
+                Tazeleyici.calistir(app, planlariDaKur = yenilendi)
+            } finally {
+                sonuc.finish()
+            }
+        }
     }
 }

@@ -149,10 +149,23 @@ object HicriTakvim {
         return days.map { d ->
             val kaynak = LocalDate.ofEpochDay(d.epochDay).minusDays(ayar.duzeltme.toLong())
             val yeni = when (ayar.tur) {
-                Tur.DIYANET -> diyanet[kaynak.toEpochDay()]
+                Tur.DIYANET -> diyanet[kaynak.toEpochDay()] ?: komsudan(diyanet, kaynak.toEpochDay())
                 Tur.UMMULKURA -> ummulkura(kaynak)?.metin
             }
             d.copy(hijri = yeni)
         }
+    }
+
+    /**
+     * Gün düzeltmesi verinin dışına taşınca (ilk/son günler) hicri tarihi yakındaki bir günden bulur.
+     * Ay sınırı aşılacaksa (30. gün belirsiz) tahmin yapılmaz.
+     */
+    private fun komsudan(diyanet: Map<Long, String?>, gun: Long): String? {
+        for (k in 1..3) for (yon in intArrayOf(-1, 1)) {
+            val h = coz(diyanet[gun + yon * k]) ?: continue
+            val yeni = h.gun - yon * k
+            if (yeni in 1..29) return h.copy(gun = yeni).metin
+        }
+        return null
     }
 }

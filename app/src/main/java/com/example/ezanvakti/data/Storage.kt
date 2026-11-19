@@ -76,6 +76,11 @@ class Storage(context: Context) {
         get() = prefs.getLong("plan_kurulma", 0)
         set(value) = prefs.edit().putLong("plan_kurulma", value).apply()
 
+    /** Vakitlerin arka planda (uygulama açılmadan) en son indirilmeye çalışıldığı an (epoch ms). */
+    var arkaPlanYenileme: Long
+        get() = prefs.getLong("arka_plan_yenileme", 0)
+        set(value) = prefs.edit().putLong("arka_plan_yenileme", value).apply()
+
     /** Kullanıcının kaydettiği konumlar (ev, iş, memleket…). */
     var kayitliKonumlar: List<SelectedLocation>
         get() = prefs.getString("kayitli_konumlar", null)?.let {

@@ -86,11 +86,18 @@ private fun gonder(context: Context, metin: String, konum: SelectedLocation?): B
         append(" · ").append(konum?.let { if (it.turkiyede) "TR" else it.country?.nameEn ?: it.country?.name } ?: "-")
         append(" · Android ").append(android.os.Build.VERSION.RELEASE)
     }
+    val konu = "Ezan Vakti — geri bildirim (${BuildConfig.VERSION_NAME})"
+    val govde = metin + ek
+    // Bazı e-posta uygulamaları (Outlook, Samsung E-posta…) ACTION_SENDTO ile gelen ekstraları yok sayar;
+    // alıcı, konu ve metin bu yüzden mailto adresinin içine de yazılır.
     val intent = Intent(Intent.ACTION_SENDTO).apply {
-        data = Uri.parse("mailto:")
+        data = Uri.parse(
+            "mailto:" + AppConfig.GERI_BILDIRIM_EPOSTA +
+                "?subject=" + Uri.encode(konu) + "&body=" + Uri.encode(govde)
+        )
         putExtra(Intent.EXTRA_EMAIL, arrayOf(AppConfig.GERI_BILDIRIM_EPOSTA))
-        putExtra(Intent.EXTRA_SUBJECT, "Ezan Vakti — geri bildirim (${BuildConfig.VERSION_NAME})")
-        putExtra(Intent.EXTRA_TEXT, metin + ek)
+        putExtra(Intent.EXTRA_SUBJECT, konu)
+        putExtra(Intent.EXTRA_TEXT, govde)
     }
     return try {
         context.startActivity(intent)
