@@ -14,7 +14,7 @@ android {
         // (namespace/Kotlin paketleri com.example.ezanvakti olarak kalabilir; Play yalnızca applicationId'ye bakar)
         minSdk = 26          // Android 8.0+ (cihazların ~%97'si)
         targetSdk = 36   // Google Play: yeni uygulamalar ve güncellemeler 31.08.2026'dan beri API 36 hedeflemeli
-        versionCode = 10   // her Play yüklemesinde bir artırılmalı
+        versionCode = 11   // her Play yüklemesinde bir artırılmalı
         versionName = "0.7.0"
     }
 
