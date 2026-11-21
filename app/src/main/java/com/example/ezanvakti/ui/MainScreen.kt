@@ -121,12 +121,16 @@ fun MainScreen(vm: PrayerViewModel) {
     // Geri tuşu: diğer sekmelerden Vakitler'e döner
     BackHandler(enabled = tab != 0) { tab = 0 }
 
+    // İlk açılışta tanıtım turu; tur bitene kadar izinler tur içinden istenir.
+    var tanitim by rememberSaveable { mutableStateOf(vm.tanitimGerekli()) }
+
     // İlk açılışta konum + bildirim izni, ardından başlat
     var permissionsAsked by rememberSaveable { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { vm.bootstrap() }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(tanitim) {
+        if (tanitim) return@LaunchedEffect
         val needed = buildList {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 add(Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -226,6 +230,7 @@ fun MainScreen(vm: PrayerViewModel) {
                             zikirVm = zikirVm,
                             onZikreGit = { tab = 2 },
                             onAyarlar = { showSettings = true },
+                            onTanitim = { tanitim = true },
                         )
                     } else if (tab == 1) {
                         TakvimEkrani(
@@ -348,6 +353,18 @@ fun MainScreen(vm: PrayerViewModel) {
         }
     }
 
+    if (tanitim) {
+        TanitimTuru(
+            vm = vm,
+            state = state,
+            onListedenSec = { showPicker = true },
+            onBitti = {
+                vm.tanitimBitti()
+                permissionsAsked = true   // tur içinde reddedilen izinler hemen yeniden sorulmasın
+                tanitim = false
+            },
+        )
+    }
     if (showPicker) LocationPickerSheet(vm, onDismiss = { showPicker = false })
 
     // Seyahat modu: başka bir ilde olunduğu anlaşılınca sor

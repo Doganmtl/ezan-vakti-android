@@ -139,6 +139,18 @@ class PrayerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Tanıtım turu gösterilmeli mi (ilk açılış). */
+    fun tanitimGerekli(): Boolean = !storage.tanitimGoruldu
+
+    fun tanitimBitti() {
+        storage.tanitimGoruldu = true
+    }
+
+    /** Tanıtım turundaki "Konumumu bul": ilk kez ise uygulamayı başlatır, değilse konumu yeniden arar. */
+    fun konumuBul() {
+        if (!bootstrapped) bootstrap() else useCurrentLocation()
+    }
+
     /** Konumdan il/ilçe bulur ve vakitleri yükler. */
     fun useCurrentLocation() {
         viewModelScope.launch {

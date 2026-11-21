@@ -39,16 +39,17 @@ fun DigerEkrani(
     zikirVm: ZikirViewModel,
     onZikreGit: () -> Unit,
     onAyarlar: () -> Unit,
+    onTanitim: () -> Unit,
 ) {
     BackHandler(enabled = sayfa != DigerSayfa.MENU) { onSayfa(DigerSayfa.MENU) }
     when (sayfa) {
         DigerSayfa.KAZA -> KazaEkrani(onGeri = { onSayfa(DigerSayfa.MENU) })
-        DigerSayfa.MENU -> DigerMenu(onSayfa, onAyarlar)
+        DigerSayfa.MENU -> DigerMenu(onSayfa, onAyarlar, onTanitim)
     }
 }
 
 @Composable
-private fun DigerMenu(onSayfa: (DigerSayfa) -> Unit, onAyarlar: () -> Unit) {
+private fun DigerMenu(onSayfa: (DigerSayfa) -> Unit, onAyarlar: () -> Unit, onTanitim: () -> Unit) {
     val context = LocalContext.current
     val widgetEklenebilir = androidx.compose.runtime.remember {
         context.getSystemService(AppWidgetManager::class.java)?.isRequestPinAppWidgetSupported == true
@@ -71,6 +72,7 @@ private fun DigerMenu(onSayfa: (DigerSayfa) -> Unit, onAyarlar: () -> Unit) {
                 MenuSatiri("➖", t("Şerit widget ekle"), t("Günün vakitleri yan yana, tek satırda")) { ekle(com.example.ezanvakti.widget.SeritWidget::class.java) }
             }
             MenuSatiri("⚙", t("Ayarlar"), t("Bildirimler, Cuma hatırlatması, konum"), onAyarlar)
+            MenuSatiri("👋", t("Tanıtım turunu tekrar göster"), t("Konum, görünüm, bildirim ve widget ayarları adım adım"), onTanitim)
         }
     }
 }

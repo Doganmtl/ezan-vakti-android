@@ -76,6 +76,14 @@ class Storage(context: Context) {
         get() = prefs.getLong("plan_kurulma", 0)
         set(value) = prefs.edit().putLong("plan_kurulma", value).apply()
 
+    /**
+     * İlk açılış tanıtım turu görüldü mü. Tur bu sürümle geldi; önceden konum seçmiş (eski sürümden
+     * güncelleyen) kullanıcılara gösterilmez.
+     */
+    var tanitimGoruldu: Boolean
+        get() = prefs.getBoolean("tanitim_goruldu", prefs.contains("location"))
+        set(value) = prefs.edit().putBoolean("tanitim_goruldu", value).apply()
+
     /** Vakitlerin arka planda (uygulama açılmadan) en son indirilmeye çalışıldığı an (epoch ms). */
     var arkaPlanYenileme: Long
         get() = prefs.getLong("arka_plan_yenileme", 0)
